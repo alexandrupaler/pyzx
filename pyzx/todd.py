@@ -31,7 +31,10 @@ import random
 from typing import Optional, Dict, Tuple, List, Set, Iterable, FrozenSet, Union
 from typing_extensions import Literal
 
-import numpy as np
+try:
+    import cupy as np
+except:
+    import numpy as np
 
 from .circuit.gates import Gate, T, S, Z, ZPhase, CZ, CNOT, ParityPhase
 from .utils import settings, EdgeType, VertexType, FractionLike

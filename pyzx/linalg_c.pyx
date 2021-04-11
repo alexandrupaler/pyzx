@@ -2,8 +2,13 @@ cimport cython
 
 import math
 
-import numpy as np
-cimport numpy as np
+try:
+    import cupy as np
+    cimport cupy as np
+except:
+    import numpy as np
+    cimport numpy as np
+
 from cpython cimport array
 import array
 

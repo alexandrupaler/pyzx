@@ -15,7 +15,11 @@
 # limitations under the License.
 
 
-import numpy as np
+try:
+    import cupy as np
+except:
+    import numpy as np
+
 
 class GeneticAlgorithm():
 

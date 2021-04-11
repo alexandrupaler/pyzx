@@ -28,8 +28,11 @@ from pyzx.linalg import Mat2
 #     np = None
 # NOTE: numpy is not used optionally in code below.
 
-import numpy as np
-
+try:
+    import cupy as np
+except:
+    import numpy as np
+    
 class CNOT_tracker(Circuit):
     def __init__(self, n_qubits, **kwargs):
         super().__init__(n_qubits, **kwargs)

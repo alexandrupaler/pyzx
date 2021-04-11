@@ -21,7 +21,10 @@ if __name__ == '__main__':
 from ..graph.graph import  Graph
 #from pyzx.graph.base import BaseGraph # TODO fix the right graph import - one of many - right backend etc
 
-import numpy as np
+try:
+    import cupy as np
+except:
+    import numpy as np
 
 SQUARE = "square"
 LINE = "line"
