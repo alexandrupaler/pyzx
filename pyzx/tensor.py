@@ -69,11 +69,12 @@ def H_to_tensor(arity: int, phase: float) -> np.ndarray:
     if phase != 0: m[-1] = np.exp(1j*phase)
     return m.reshape([2]*arity)
 
-def pop_and_shift(verts, indices):
+def pop_and_shift_uncontracted_indices(past_verts, indices):
     res = []
-    for v in verts:
+    for v in past_verts:
         res.append(indices[v].pop())
-    for i in sorted(res,reverse=True):
+
+    for i in sorted(res, reverse=True):
         for w,l in indices.items():
             l2 = []
             for j in l:
@@ -92,9 +93,9 @@ def tensorfy(g: 'BaseGraph[VT,ET]', preserve_scalar:bool=True) -> np.ndarray:
     depth = g.depth()
     verts_row: Dict[FloatInt, List['VT']] = {}
     for v in g.vertices():
-        r = rows[v]
-        if r in verts_row: verts_row[r].append(v)
-        else: verts_row[r] = [v]
+        curr_row = rows[v]
+        if curr_row in verts_row: verts_row[curr_row].append(v)
+        else: verts_row[curr_row] = [v]
 
     if not g.inputs and not g.outputs:
     	if any(g.type(v)==VertexType.BOUNDARY for v in g.vertices()):
@@ -102,58 +103,78 @@ def tensorfy(g: 'BaseGraph[VT,ET]', preserve_scalar:bool=True) -> np.ndarray:
     
     had = 1/sqrt(2)*np.array([[1,1],[1,-1]])
     id2 = np.identity(2)
+
     tensor = np.array(1.0,dtype='complex128')
     qubits = len(g.inputs)
     for i in range(qubits): tensor = np.tensordot(tensor,id2,axes=0)
+
     inputs = sorted(g.inputs,key=g.qubit)
-    indices = {}
+    uncontracted_indices = {}
     for i, v in enumerate(inputs):
-        indices[v] = [1 + 2*i]
+        uncontracted_indices[v] = [1 + 2*i]
     
-    for i,r in enumerate(sorted(verts_row.keys())):
-        for v in sorted(verts_row[r]):
+    for i,curr_row in enumerate(sorted(verts_row.keys())):
+        for v in sorted(verts_row[curr_row]):
             neigh = list(g.neighbors(v))
-            d = len(neigh)
+            arity = len(neigh)
             if v in g.inputs:
                 if types[v] != 0: raise ValueError("Wrong type for input:", v, types[v])
                 continue # inputs already taken care of
             if v in g.outputs: 
                 #print("output")
-                if d != 1: raise ValueError("Weird output")
+                if arity != 1: raise ValueError("Weird output")
                 if types[v] != 0: raise ValueError("Wrong type for output:",v, types[v])
-                d += 1
+                arity += 1
                 t = id2
             else:
                 phase = pi*phases[v]
                 if types[v] == 1:
-                    t = Z_to_tensor(d,phase)
+                    t = Z_to_tensor(arity, phase)
                 elif types[v] == 2:
-                    t = X_to_tensor(d,phase)
+                    t = X_to_tensor(arity, phase)
                 elif types[v] == 3:
-                    t = H_to_tensor(d,phase)
+                    t = H_to_tensor(arity, phase)
                 else:
                     raise ValueError("Vertex %s has non-ZXH type but is not an input or output" % str(v))
-            nn = list(filter(lambda n: rows[n]<r or (rows[n]==r and n<v), neigh)) # type: ignore # TODO: allow ordering on vertex indices?
-            ety = {n:g.edge_type(g.edge(v,n)) for n in nn}
-            nn.sort(key=lambda n: ety[n]) 
-            for n in nn:
-                if ety[n] == EdgeType.HADAMARD:
+
+            # type: ignore # TODO: allow ordering on vertex indices?
+            past_vertices = list(filter(lambda n: rows[n]<curr_row or (rows[n]==curr_row and n<v), neigh))
+
+            edge_type = {n:g.edge_type(g.edge(v,n)) for n in past_vertices}
+            past_vertices.sort(key=lambda n: edge_type[n])
+            for n in past_vertices:
+                if edge_type[n] == EdgeType.HADAMARD:
                     t = np.tensordot(t,had,(0,0)) # Hadamard edges are moved to the last index of t
-            contr = pop_and_shift(nn,indices) #the last indices in contr correspond to hadamard contractions
-            tensor = np.tensordot(tensor,t,axes=(contr,list(range(len(t.shape)-len(contr),len(t.shape)))))
-            indices[v] = list(range(len(tensor.shape)-d+len(contr), len(tensor.shape)))
-            
+
+            # the last indices in idx_contr_past correspond to hadamard contractions
+            # These are the indices in the total tensor that will be contracted
+            idx_contr_past = pop_and_shift_uncontracted_indices(past_vertices, uncontracted_indices)
+
+            # The last axes in the tensor t are the one that will be contracted
+            idx_contr_curr = list(range(len(t.shape) - len(idx_contr_past), len(t.shape)))
+            print(idx_contr_past, idx_contr_curr)
+
+            tensor = np.tensordot(tensor, t, axes=(idx_contr_past, idx_contr_curr))
+
+            # For the vertex v the indices that remain uncontracted are the last ones
+            nr_remainining_indices = (arity - len(idx_contr_past))
+            uncontracted_indices[v] = list(range(len(tensor.shape) - nr_remainining_indices, len(tensor.shape)))
+
             if not preserve_scalar and i % 10 == 0:
                 if np.abs(tensor).max() < 10**-6: # Values are becoming too small
                     tensor *= 10**4 # So scale all the numbers up
+
+    if preserve_scalar: tensor *= g.scalar.to_number()
+
     perm = []
-    for o in sorted(g.outputs,key=g.qubit):
-        perm.append(indices[o][0])
+    for o in sorted(g.outputs, key=g.qubit):
+        assert(len(uncontracted_indices[o]) == 1)
+        perm.append(uncontracted_indices[o][0])
     for i in range(len(g.inputs)):
         perm.append(i)
 
-    tensor = np.transpose(tensor,perm)
-    if preserve_scalar: tensor *= g.scalar.to_number()
+    tensor = np.transpose(tensor, perm)
+
     return tensor
 
 def tensor_to_matrix(t: np.ndarray, inputs: int, outputs: int) -> np.ndarray:

@@ -44,7 +44,7 @@ def compute_row_ops(m):
     m1.gauss(full_reduce=True,x=ops)
     #extr_rows = [r for r,row in enumerate(m1.data) if sum(row)==1]
 
-    # keep only the rows corresponding to extractable verts
+    # keep only the rows corresponding to extractable past_verts
     #ops_rows = []
     ops_rows = [ops.data[r]
                    for r,row in enumerate(m1.data)

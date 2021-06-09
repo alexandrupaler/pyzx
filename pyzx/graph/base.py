@@ -433,9 +433,42 @@ class BaseGraph(Generic[VT, ET], metaclass=DocstringMeta):
     def to_tensor(self, preserve_scalar:bool=True) -> np.ndarray:
         """Returns a representation of the graph as a tensor using :func:`~pyzx.tensor.tensorfy`"""
         return tensorfy(self, preserve_scalar)
+
     def to_matrix(self,preserve_scalar:bool=True) -> np.ndarray:
         """Returns a representation of the graph as a matrix using :func:`~pyzx.tensor.tensorfy`"""
-        return tensor_to_matrix(tensorfy(self, preserve_scalar), len(self.inputs), len(self.outputs))
+        # return tensor_to_matrix(tensorfy(self, preserve_scalar), len(self.inputs), len(self.outputs))
+
+        tensor = tensorfy(self, preserve_scalar)
+
+        import time
+
+        t1 = time.time()
+        arr1 = tensor_to_matrix(tensor, len(self.inputs), len(self.outputs))
+        t2 = time.time()
+        # return arr1
+
+        q = len(self.outputs)
+        l = list(range(2 * q))
+        l1 = [2 * i + 0 for i in range(q)]
+        l2 = [2 * i + 1 for i in range(q)]
+
+        print(tensor.shape)
+        print(l, l1, l2)
+        # pyZX already permutes these
+        # arr2 = np.einsum(tensor, l, l1 + l2).reshape([2**q, 2**len(self.inputs)])
+        t3 = time.time()
+        arr2 = tensor.reshape([2 ** q, 2 ** len(self.inputs)])
+        t4 = time.time()
+
+        # print(arr1)
+        # print(arr2)
+
+        print(t2 - t1, t4 - t3)
+
+        assert np.all(arr1 == arr2)
+
+        return arr2
+
 
     def to_json(self, include_scalar:bool=True) -> str:
         """Returns a json representation of the graph that follows the Quantomatic .qgraph format.
