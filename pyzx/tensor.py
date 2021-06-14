@@ -66,7 +66,8 @@ def X_to_tensor(arity: int, phase: float) -> np.ndarray:
 
 def H_to_tensor(arity: int, phase: float) -> np.ndarray:
     m = np.ones(2**arity, dtype = complex)
-    if phase != 0: m[-1] = np.exp(1j*phase)
+    if phase != 0:
+        m[-1] = np.exp(1j*phase)
     return m.reshape([2]*arity)
 
 def pop_and_shift_uncontracted_indices(past_verts, indices):
@@ -144,7 +145,7 @@ def tensorfy(g: 'BaseGraph[VT,ET]', preserve_scalar:bool=True) -> np.ndarray:
             past_vertices.sort(key=lambda n: edge_type[n])
             for n in past_vertices:
                 if edge_type[n] == EdgeType.HADAMARD:
-                    t = np.tensordot(t,had,(0,0)) # Hadamard edges are moved to the last index of t
+                    t = np.tensordot(t, had, (0,0)) # Hadamard edges are moved to the last index of t
 
             # the last indices in idx_contr_past correspond to hadamard contractions
             # These are the indices in the total tensor that will be contracted
