@@ -8,7 +8,7 @@ import pyzx
 from pyzx.rules import MatchPivotType
 from pyzx.graph.base import BaseGraph, VT, ET
 
-from .base_optimizer import BaseOptimizer
+from mcsim.optimizers.base_optimizer import BaseOptimizer
 from .mcsim_pyzx_simplify import match_spider, spider, simp, unspider, \
     flip_spider_type, phase_free_simp
 

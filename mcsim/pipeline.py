@@ -60,19 +60,9 @@ class McSimPipeline:
         :return: pyzx circuit and pyzx graph
         """
 
-        loaded_circuit = None
-        if isinstance(circuit, cirq.Circuit):
-            loaded_circuit = connectors.from_cirq(circuit)
 
-        elif isinstance(circuit, pyzx.Circuit):
-            loaded_circuit = circuit
 
-        if loaded_circuit is None:
-            raise McSimLoaderError("Unknown circuit type")
-
-        circuit_graph = loaded_circuit.to_graph()
-
-        return loaded_circuit, circuit_graph
+        return "Poate facem siasta la final"
 
     @timeit
     def extract(self, graph: pyzx.Graph) -> np.array:
