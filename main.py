@@ -12,3 +12,5 @@ print("run mcsim")
 # Test simplification from mcsim
 from mcsim import phase_free_simp
 phase_free_simp(testc.to_graph())
+
+# Test base extractor from mcsim
