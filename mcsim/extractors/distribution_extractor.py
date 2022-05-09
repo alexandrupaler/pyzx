@@ -10,7 +10,6 @@ from mcsim import BaseExtractor
 
 
 class Extractor_Dist(BaseExtractor):
-
     def distribution_f(self, params) -> List[float]:
         return simple_distribution(params)
 
@@ -23,7 +22,7 @@ class Extractor_Dist(BaseExtractor):
         """
 
         # deserialization of parameters#
-        tolerance = self.params['tolerance']
+        tolerance = self.params["tolerance"]
         ##
 
         if show_changes:
@@ -46,15 +45,15 @@ def graph_info(graph, level):  # where I shuld mouve this or delet
     """
     if level == 1:
         print(graph.stats())
-        print('rows:', graph.rows())
+        print("rows:", graph.rows())
     if level == 2:
-        print('phases:', graph.phases())
+        print("phases:", graph.phases())
         print()
-        print('types:', graph.types())
+        print("types:", graph.types())
         print()
-        print('depth:', graph.depth())
+        print("depth:", graph.depth())
         print()
-        print('vertices:', graph.vertices)
+        print("vertices:", graph.vertices)
     pyzx.draw(graph, labels=True)
 
 
@@ -71,9 +70,9 @@ def fill_degree(graph: pyzx.graph, dist: List[float], tolerance: float) -> pyzx.
     importances = get_importance(graph)
     distribution = distributin_to_importance(graph, dist)
 
-    vert_i=0# vert indices in vertices
+    vert_i = 0  # vert indices in vertices
     for vert in vertices:
-        vert_i=vert_i+1
+        vert_i = vert_i + 1
         if graph.type(vert) == 0 and graph.row(vert) != 0:
             graph.set_row(vert, len(distribution))
 
@@ -82,14 +81,15 @@ def fill_degree(graph: pyzx.graph, dist: List[float], tolerance: float) -> pyzx.
             insert = 1
             while insert:
                 for k in range(len(distribution)):
-                    if distribution[k] + t_tolerance >= importances[vert_i-1]:
-                        distribution[k] = distribution[k] - importances[vert_i-1]
+                    if distribution[k] + t_tolerance >= importances[vert_i - 1]:
+                        distribution[k] = distribution[k] - importances[vert_i - 1]
                         graph.set_row(vert, k)
                         insert = 0
                         break
                 t_tolerance = t_tolerance + 1
 
     return graph
+
 
 '''
 def distributin_to_degree(graph: pyzx.graph, dist: List[float]) -> List[float]:
@@ -113,6 +113,8 @@ def distributin_to_degree(graph: pyzx.graph, dist: List[float]) -> List[float]:
 
     return dist
 '''
+
+
 def distributin_to_importance(graph: pyzx.graph, dist: List[float]) -> List[float]:
     """
     Create a degree distribution close to the desired one.
@@ -124,10 +126,10 @@ def distributin_to_importance(graph: pyzx.graph, dist: List[float]) -> List[floa
     importances = get_importance(graph)
     total_imp = 0
 
-    k=0 # vert indices in vertices
+    k = 0  # vert indices in vertices
     for vert in vertices:
         total_imp = total_imp + importances[k]
-        k=k+1
+        k = k + 1
     s = 0
     for i in dist:
         s = s + i
@@ -136,6 +138,7 @@ def distributin_to_importance(graph: pyzx.graph, dist: List[float]) -> List[floa
         dist[i] = (dist[i] / s) * total_imp
 
     return dist
+
 
 def simple_distribution(params: Dict) -> List[float]:
     """
@@ -147,9 +150,9 @@ def simple_distribution(params: Dict) -> List[float]:
     """
 
     # deserialization of parameters#
-    nr_sections = int(params['nr_section'])
-    sigma = params['sigma']
-    mu = params['mu'] * nr_sections  # !! Here I  need some sugestion
+    nr_sections = int(params["nr_section"])
+    sigma = params["sigma"]
+    mu = params["mu"] * nr_sections  # !! Here I  need some sugestion
     ##
 
     dristribution = []
@@ -173,14 +176,12 @@ def gaussin_n(sigma: float, mu: float, x: float) -> float:
 
 
 def get_importance(graph):
-    """
-
-    """
+    """ """
     importances = []
 
-    k=0
+    k = 0
     for spider in graph.vertices():
-        k=k+1
+        k = k + 1
         deg = graph.vertex_degree(spider)
         neighbours = graph.neighbors(spider)
         neighbour_contribution = 0
@@ -190,9 +191,4 @@ def get_importance(graph):
         value = (neighbour_contribution + deg) * np.log(neighbour_contribution + deg)
         importances.append(value)
 
-
-
     return importances
-
-
-

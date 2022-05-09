@@ -8,7 +8,6 @@ class CircFormat(Enum):
     Circuit formats supported by the simulator connectors
     """
 
-    CIRQ = "cirq"
     PYZX = "pyzx"
 
 
@@ -22,11 +21,11 @@ class SimulatorType(Enum):
 
 
 PYZX_TO_CIRQ_MAPPING = {
-    'one_qubit_phase': {
+    "one_qubit_phase": {
         "ZPhase": cirq.ZPowGate,
         "XPhase": cirq.XPowGate,
     },
-    'one_qubit': {
+    "one_qubit": {
         "Z": cirq.Z,
         "X": cirq.X,
         "NOT": cirq.X,
@@ -34,8 +33,8 @@ PYZX_TO_CIRQ_MAPPING = {
         "HAD": cirq.H,
         "S": cirq.S,
         "T": cirq.T,
-        "S*": (cirq.S ** -1),
-        "T*": (cirq.T ** -1),
+        "S*": (cirq.S**-1),
+        "T*": (cirq.T**-1),
     },
     "two_qubit": {
         "CNOT": cirq.CNOT,
@@ -47,11 +46,3 @@ PYZX_TO_CIRQ_MAPPING = {
         "TOFFOLI": cirq.TOFFOLI,
     },
 }
-
-tmp_dict = {
-    **PYZX_TO_CIRQ_MAPPING["one_qubit_phase"],
-    **PYZX_TO_CIRQ_MAPPING["one_qubit"],
-    **PYZX_TO_CIRQ_MAPPING["two_qubit"],
-    **PYZX_TO_CIRQ_MAPPING["extra_gates"],
-}
-CIRQ_TO_PYZX_MAPPING = {v: k for k, v in tmp_dict.items()}

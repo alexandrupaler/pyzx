@@ -17,15 +17,15 @@ class ReorderExtractor(BaseExtractor):
         # this part is just for verification and checking
         if help_view:
             print(graph.stats())
-            print('rows:', graph.rows())
+            print("rows:", graph.rows())
             print(graph.rows()[0])
-            print('phases:', graph.phases())
+            print("phases:", graph.phases())
             print()
-            print('types:', graph.types())
+            print("types:", graph.types())
             print()
-            print('depth:', graph.depth())
+            print("depth:", graph.depth())
             print()
-            print('vertices:', graph.vertices)
+            print("vertices:", graph.vertices)
             zx.draw(graph, labels=True)
 
         ##################################
@@ -49,15 +49,15 @@ class ReorderExtractor(BaseExtractor):
 
         # this part is just for verification and checking
         if help_view:
-            print('rows:', graph.rows())
+            print("rows:", graph.rows())
             print(graph.rows()[0])
-            print('phases:', graph.phases())
+            print("phases:", graph.phases())
             print()
-            print('types:', graph.types())
+            print("types:", graph.types())
             print()
-            print('depth:', graph.depth())
+            print("depth:", graph.depth())
             print()
-            print('vertices:', graph.vertices)
+            print("vertices:", graph.vertices)
             zx.draw(graph, labels=True)
         ##################################
 

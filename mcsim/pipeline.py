@@ -4,17 +4,14 @@
 from typing import Union
 
 import numpy as np
-import cirq
+
 import pyzx
-
-# import qsimcirq
-
 
 from mcsim.optimizers import BaseOptimizer
 from mcsim.extractors import BaseExtractor
-from mcsim.exceptions import McSimLoaderError, McSimSimulatorTypeError
+from mcsim.exceptions import McSimSimulatorTypeError, McSimLoaderError
 from mcsim.constants import CircFormat, SimulatorType
-from mcsim.measurements import timeit, MeasurementDict
+from mcsim.performance_indicators.measurements import timeit, MeasurementDict
 
 
 # pylint: disable=R0201
@@ -53,16 +50,24 @@ class McSimPipeline:
         self.timing = MeasurementDict()
 
     @timeit
-    def load(self, circuit: Union[cirq.Circuit, pyzx.Circuit]) -> Union[pyzx.Circuit, None]:
+    def load(self, circuit: Union[pyzx.Circuit]) -> Union[pyzx.Circuit, None]:
         """
         Loads and converts circuit to a pyzx compatible circuit and graph instances.
         :param circuit: circuit in the supported format: cirq.Circuit or pyzx.Circuit
         :return: pyzx circuit and pyzx graph
         """
 
+        loaded_circuit = None
+        print(type(circuit))
+        if isinstance(circuit, pyzx.Circuit):
+            loaded_circuit = circuit
 
+        if loaded_circuit is None:
+            raise McSimLoaderError("Unknown circuit type")
 
-        return "Poate facem siasta la final"
+        circuit_graph = loaded_circuit.to_graph()
+        print(circuit_graph)
+        return loaded_circuit, circuit_graph
 
     @timeit
     def extract(self, graph: pyzx.Graph) -> np.array:
@@ -88,7 +93,7 @@ class McSimPipeline:
 
     @timeit
     def simulate(
-        self, initial_state: np.array, circuit: Union[cirq.Circuit, pyzx.Circuit]
+        self, initial_state: np.array, circuit: Union[pyzx.Circuit]
     ) -> np.array:
         """
         Runs the default pipeline steps.
@@ -99,10 +104,7 @@ class McSimPipeline:
         _, graph = self.load(circuit)
         optimized_graph = self.optimize(graph)
 
-        if self.simulator == SimulatorType.QSIM:
-            result = self.evaluate_with_qsim(initial_state, optimized_graph)
-
-        elif self.simulator == SimulatorType.MCSIM:
+        if self.simulator == SimulatorType.MCSIM:
             result = self.evaluate_with_mcsim(initial_state, optimized_graph)
 
         else:
@@ -111,7 +113,9 @@ class McSimPipeline:
         return result
 
     @timeit
-    def evaluate_with_mcsim(self, initial_state: np.array, optimized_graph: pyzx.Graph) -> np.array:
+    def evaluate_with_mcsim(
+        self, initial_state: np.array, optimized_graph: pyzx.Graph
+    ) -> np.array:
         """
             Simulation of a circuit from an optimized graph, using mcsim basic simulator
         :param initial_state: prepared initial state
@@ -120,20 +124,6 @@ class McSimPipeline:
         """
         matrix = self.extract(optimized_graph)
         result = self.evaluate(initial_state, matrix)
-
-        return result
-
-    @timeit
-    def evaluate_with_qsim(self, initial_state, optimized_graph):
-        """
-            Simulation of a circuit from an optimized graph, using mcsim basic simulator
-        :param initial_state:  prepared initial state
-        :param optimized_graph: graph optimized using the supplied optimizer class
-        :return: circuit simulation result
-        """
-        pyzx_circuit = pyzx.extract_circuit(optimized_graph)
-        cirq_circuit = connectors.to_cirq(pyzx_circuit)
-        result = qsimcirq.QSimSimulator().simulate(cirq_circuit, initial_state=initial_state)
 
         return result
 
@@ -150,8 +140,8 @@ class McSimPipeline:
 
     @timeit
     def get_circuit(
-        self, graph: pyzx.Graph, circuit_format: CircFormat = CircFormat.CIRQ
-    ) -> Union[cirq.Circuit, pyzx.Circuit, None]:
+        self, graph: pyzx.Graph, circuit_format: CircFormat = CircFormat.PYZX
+    ) -> Union[pyzx.Circuit, None]:
         """
         Converts a pyzx graph into a supported type using connectors
         :param graph: pyzx grapg to be converted
@@ -161,8 +151,6 @@ class McSimPipeline:
 
         pyzx_circuit = pyzx.extract_circuit(graph)
 
-        if circuit_format == CircFormat.CIRQ:
-            return connectors.to_cirq(pyzx_circuit)
         if circuit_format == CircFormat.PYZX:
             return pyzx_circuit
 

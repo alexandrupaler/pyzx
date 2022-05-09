@@ -9,17 +9,24 @@ from pyzx.rules import MatchPivotType
 from pyzx.graph.base import BaseGraph, VT, ET
 
 from mcsim.optimizers.base_optimizer import BaseOptimizer
-from .mcsim_pyzx_simplify import match_spider, spider, simp, unspider, \
-    flip_spider_type, phase_free_simp
+from mcsim.mcsim_pyzx_simplify import (
+    match_spider,
+    spider,
+    simp,
+    unspider,
+    flip_spider_type,
+    phase_free_simp,
+)
+
 
 class SpiderOptimizer(BaseOptimizer):
     """
-        The spider optimizer is searching to minimize the average
-        degree/arity of the spiders. The hope is to reduce CNOTs.
+    The spider optimizer is searching to minimize the average
+    degree/arity of the spiders. The hope is to reduce CNOTs.
     """
 
     @staticmethod
-    def match_min_degree(g: BaseGraph[VT,ET], min_degree) -> List[MatchPivotType[VT]]:
+    def match_min_degree(g: BaseGraph[VT, ET], min_degree) -> List[MatchPivotType[VT]]:
         """
         Matches vertices of degree max param
         """
@@ -42,14 +49,13 @@ class SpiderOptimizer(BaseOptimizer):
 
                 # Param2: Modify new_phase to reflect the phase of
                 # the spider that is resulting after unspider rule.
-                new_phase= g.phase(vertex)
+                new_phase = g.phase(vertex)
                 ret.append([vertex, processed_ngh, new_phase])
 
                 all_vertices.append(vertex)
                 all_vertices += processed_ngh
 
         return ret
-
 
     def optimize(self, graph: pyzx.Graph) -> pyzx.Graph:
         """

@@ -13,15 +13,33 @@ use the power of :func:`full_reduce` while not changing the structure of the gra
 #         'full_reduce', 'teleport_reduce', 'reduce_scalar', 'supplementarity_simp']
 
 
-
 from typing import List, Callable, Optional, Union, Tuple, Iterator
 
 from pyzx.utils import toggle_vertex
-from pyzx.rules import MatchObject, RewriteOutputType, spider, unspider, \
-    pivot, lcomp, merge_phase_gadgets, match_lcomp, match_pivot, match_ids, \
-    match_pivot_gadget, match_pivot_boundary, remove_ids, match_phase_gadgets,\
-    apply_supplementarity, match_supplementarity, match_copy, apply_copy, \
-    match_spider, match_bialg, bialg, toggle_edge
+from pyzx.rules import (
+    MatchObject,
+    RewriteOutputType,
+    spider,
+    unspider,
+    pivot,
+    lcomp,
+    merge_phase_gadgets,
+    match_lcomp,
+    match_pivot,
+    match_ids,
+    match_pivot_gadget,
+    match_pivot_boundary,
+    remove_ids,
+    match_phase_gadgets,
+    apply_supplementarity,
+    match_supplementarity,
+    match_copy,
+    apply_copy,
+    match_spider,
+    match_bialg,
+    bialg,
+    toggle_edge,
+)
 
 from pyzx.graph.base import BaseGraph, VT, ET
 from pyzx.simplify import Stats
@@ -43,15 +61,15 @@ apply_gadgets_merge = merge_phase_gadgets
 
 
 def simp_iter(
-        g: BaseGraph[VT, ET],
-        match: Callable[..., List[MatchObject]],
-        rewrite: Callable[
-            [BaseGraph[VT, ET], List[MatchObject]], RewriteOutputType[ET, VT]],
-        matchf: Optional[
-            Union[Callable[[ET], bool], Callable[[VT], bool]]] = None,
-        quiet: bool = False,
-        stats: Optional[Stats] = None) -> Iterator[
-    Tuple[BaseGraph[VT, ET], int]]:
+    g: BaseGraph[VT, ET],
+    match: Callable[..., List[MatchObject]],
+    rewrite: Callable[
+        [BaseGraph[VT, ET], List[MatchObject]], RewriteOutputType[ET, VT]
+    ],
+    matchf: Optional[Union[Callable[[ET], bool], Callable[[VT], bool]]] = None,
+    quiet: bool = False,
+    stats: Optional[Stats] = None,
+) -> Iterator[Tuple[BaseGraph[VT, ET], int]]:
     """Helper method for constructing simplification strategies based
     on the rules present in rules_. It uses the ``match`` function to
     find matches, and then rewrites ``g`` using ``rewrite``.
@@ -92,7 +110,7 @@ def simp_iter(
             i += 1
 
             if not quiet:
-                print(len(m), end='')
+                print(len(m), end="")
 
             etab, rem_verts, rem_edges, check_isolated_vertices = rewrite(g, m)
             g.add_edge_table(etab)
@@ -102,7 +120,7 @@ def simp_iter(
             if check_isolated_vertices:
                 g.remove_isolated_vertices()
             if not quiet:
-                print('. ', end='')
+                print(". ", end="")
 
             yield g, i
             new_matches = True
@@ -111,18 +129,19 @@ def simp_iter(
                 stats.count_rewrites(match.__name__, len(m))
 
     if not quiet and i > 0:
-        print(' {!s} iterations'.format(i))
+        print(" {!s} iterations".format(i))
 
 
 def simp(
-        g: BaseGraph[VT, ET],
-        match: Callable[..., List[MatchObject]],
-        rewrite: Callable[
-            [BaseGraph[VT, ET], List[MatchObject]], RewriteOutputType[ET, VT]],
-        matchf: Optional[
-            Union[Callable[[ET], bool], Callable[[VT], bool]]] = None,
-        quiet: bool = False,
-        stats: Optional[Stats] = None) -> int:
+    g: BaseGraph[VT, ET],
+    match: Callable[..., List[MatchObject]],
+    rewrite: Callable[
+        [BaseGraph[VT, ET], List[MatchObject]], RewriteOutputType[ET, VT]
+    ],
+    matchf: Optional[Union[Callable[[ET], bool], Callable[[VT], bool]]] = None,
+    quiet: bool = False,
+    stats: Optional[Stats] = None,
+) -> int:
     """Version of :func:`simp)iter` that performs all rewrites at once,
     returns an iterator."""
 
@@ -134,75 +153,90 @@ def simp(
 
     return max_i
 
-def pivot_simp(g: BaseGraph[VT, ET],
-               matchf: Optional[Callable[[ET], bool]] = None,
-               quiet: bool = False, stats: Optional[Stats] = None) -> int:
+
+def pivot_simp(
+    g: BaseGraph[VT, ET],
+    matchf: Optional[Callable[[ET], bool]] = None,
+    quiet: bool = False,
+    stats: Optional[Stats] = None,
+) -> int:
     """
-        simp for match
+    simp for match
     """
     return simp(g, match_pivot, pivot, matchf=matchf, quiet=quiet, stats=stats)
 
 
-def pivot_gadget_simp(g: BaseGraph[VT, ET],
-                      matchf: Optional[Callable[[ET], bool]] = None,
-                      quiet: bool = False,
-                      stats: Optional[Stats] = None) -> int:
+def pivot_gadget_simp(
+    g: BaseGraph[VT, ET],
+    matchf: Optional[Callable[[ET], bool]] = None,
+    quiet: bool = False,
+    stats: Optional[Stats] = None,
+) -> int:
     """
     simp for pivot gadget
     """
-    return simp(g, match_pivot_gadget, pivot, matchf=matchf, quiet=quiet,
-                stats=stats)
+    return simp(g, match_pivot_gadget, pivot, matchf=matchf, quiet=quiet, stats=stats)
 
 
-def pivot_boundary_simp(g: BaseGraph[VT, ET],
-                        matchf: Optional[Callable[[ET], bool]] = None,
-                        quiet: bool = False,
-                        stats: Optional[Stats] = None) -> int:
+def pivot_boundary_simp(
+    g: BaseGraph[VT, ET],
+    matchf: Optional[Callable[[ET], bool]] = None,
+    quiet: bool = False,
+    stats: Optional[Stats] = None,
+) -> int:
     """
-        simp for pivot boundary
+    simp for pivot boundary
     """
-    return simp(g, match_pivot_boundary, pivot, matchf=matchf, quiet=quiet,
-                stats=stats)
+    return simp(g, match_pivot_boundary, pivot, matchf=matchf, quiet=quiet, stats=stats)
 
 
-def lcomp_simp(g: BaseGraph[VT, ET],
-               matchf: Optional[Callable[[VT], bool]] = None,
-               quiet: bool = False, stats: Optional[Stats] = None) -> int:
+def lcomp_simp(
+    g: BaseGraph[VT, ET],
+    matchf: Optional[Callable[[VT], bool]] = None,
+    quiet: bool = False,
+    stats: Optional[Stats] = None,
+) -> int:
     """
-        simp for local complementarity
+    simp for local complementarity
     """
     return simp(g, match_lcomp, lcomp, matchf=matchf, quiet=quiet, stats=stats)
 
 
-def id_simp(g: BaseGraph[VT, ET], matchf: Optional[Callable[[VT], bool]] = None,
-            quiet: bool = False, stats: Optional[Stats] = None) -> int:
+def id_simp(
+    g: BaseGraph[VT, ET],
+    matchf: Optional[Callable[[VT], bool]] = None,
+    quiet: bool = False,
+    stats: Optional[Stats] = None,
+) -> int:
     """
-        simp for identity
+    simp for identity
     """
-    return simp(g, match_ids, remove_ids, matchf=matchf, quiet=quiet,
-                stats=stats)
+    return simp(g, match_ids, remove_ids, matchf=matchf, quiet=quiet, stats=stats)
 
 
-def gadget_simp(g: BaseGraph[VT, ET], quiet: bool = False,
-                stats: Optional[Stats] = None) -> int:
+def gadget_simp(
+    g: BaseGraph[VT, ET], quiet: bool = False, stats: Optional[Stats] = None
+) -> int:
     """
-        simp for phase gadgets
+    simp for phase gadgets
     """
-    return simp(g, match_phase_gadgets, merge_phase_gadgets, quiet=quiet,
-                stats=stats)
+    return simp(g, match_phase_gadgets, merge_phase_gadgets, quiet=quiet, stats=stats)
 
 
-def supplementarity_simp(g: BaseGraph[VT, ET], quiet: bool = False,
-                         stats: Optional[Stats] = None) -> int:
+def supplementarity_simp(
+    g: BaseGraph[VT, ET], quiet: bool = False, stats: Optional[Stats] = None
+) -> int:
     """
     simp for supplementarity
     """
-    return simp(g, match_supplementarity, apply_supplementarity, quiet=quiet,
-                stats=stats)
+    return simp(
+        g, match_supplementarity, apply_supplementarity, quiet=quiet, stats=stats
+    )
 
 
-def copy_simp(g: BaseGraph[VT, ET], quiet: bool = False,
-              stats: Optional[Stats] = None) -> int:
+def copy_simp(
+    g: BaseGraph[VT, ET], quiet: bool = False, stats: Optional[Stats] = None
+) -> int:
     """
     Copies 1-ary spiders with 0/pi phase through neighbors.
     WARNING: only use on maximally fused diagrams consisting of Z-spiders.
@@ -210,8 +244,9 @@ def copy_simp(g: BaseGraph[VT, ET], quiet: bool = False,
     return simp(g, match_copy, apply_copy, quiet=quiet, stats=stats)
 
 
-def phase_free_simp(g: BaseGraph[VT, ET], quiet: bool = False,
-                    stats: Optional[Stats] = None) -> int:
+def phase_free_simp(
+    g: BaseGraph[VT, ET], quiet: bool = False, stats: Optional[Stats] = None
+) -> int:
     """
     Performs the following set of simplifications on the graph:
     spider -> bialg
@@ -223,7 +258,7 @@ def phase_free_simp(g: BaseGraph[VT, ET], quiet: bool = False,
 
 def flip_spider_type(g: BaseGraph[VT, ET], v: VT) -> None:
     """
-        the type of a spider is flipped
+    the type of a spider is flipped
     """
     g.set_type(v, toggle_vertex(g.types()[v]))
     for e in g.incident_edges(v):

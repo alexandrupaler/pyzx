@@ -26,7 +26,7 @@ class BaseOptimizer:
 
     @property
     def params(self):
-        """ Parameters of the heuristic used for the circuit optimization"""
+        """Parameters of the heuristic used for the circuit optimization"""
         return self._params
 
     @params.setter

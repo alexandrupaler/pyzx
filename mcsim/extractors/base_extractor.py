@@ -24,7 +24,7 @@ class BaseExtractor:
 
     @property
     def params(self):
-        """ Parameters of the heuristic used for the matrix extraction"""
+        """Parameters of the heuristic used for the matrix extraction"""
         return self._params
 
     @params.setter
