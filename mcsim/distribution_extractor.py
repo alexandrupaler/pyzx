@@ -6,7 +6,7 @@ import numpy as np
 import pyzx
 from typing import Dict, List
 
-from mcsim.extractors import BaseExtractor
+from mcsim import BaseExtractor
 
 
 class Extractor_Dist(BaseExtractor):

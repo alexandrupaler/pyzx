@@ -7,7 +7,7 @@ from typing import Optional
 import numpy as np
 import pyzx as zx
 
-from mcsim.extractors import BaseExtractor
+from mcsim import BaseExtractor
 
 
 class ReorderExtractor(BaseExtractor):
