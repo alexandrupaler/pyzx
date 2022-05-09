@@ -98,6 +98,8 @@ def tensorfy(g: 'BaseGraph[VT,ET]', preserve_scalar:bool=True) -> np.ndarray:
     """Takes in a Graph and outputs a multidimensional numpy array
     representing the linear map the ZX-diagram implements.
     Beware that quantum circuits take exponential memory to represent."""
+    if g.is_hybrid():
+        raise ValueError("Hybrid graphs are not supported.")
     rows = g.rows()
     phases = g.phases()
     types = g.types()
@@ -108,30 +110,34 @@ def tensorfy(g: 'BaseGraph[VT,ET]', preserve_scalar:bool=True) -> np.ndarray:
         if curr_row in verts_row: verts_row[curr_row].append(v)
         else: verts_row[curr_row] = [v]
 
-    if not g.inputs and not g.outputs:
-    	if any(g.type(v)==VertexType.BOUNDARY for v in g.vertices()):
-    		raise ValueError("Diagram contains BOUNDARY-type vertices, but has no inputs or outputs set. Perhaps call g.auto_detect_inputs() first?")
-    
+    inputs = g.inputs()
+    outputs = g.outputs()
+    if not inputs and not outputs:
+        if any(g.type(v)==VertexType.BOUNDARY for v in g.vertices()):
+            raise ValueError("Diagram contains BOUNDARY-type vertices, but has no inputs or outputs set. Perhaps call g.auto_detect_inputs() first?")
+
     had = 1/sqrt(2)*np.array([[1,1],[1,-1]])
     id2 = np.identity(2)
 
     tensor = np.array(1.0,dtype='complex128')
-    qubits = len(g.inputs)
+    qubits = len(inputs)
     for i in range(qubits): tensor = np.tensordot(tensor,id2,axes=0)
+    inputs = tuple(sorted(inputs,key=g.qubit))
+    indices = {}
 
-    inputs = sorted(g.inputs,key=g.qubit)
+    inputs = sorted(inputs,key=g.qubit)
     uncontracted_indices = {}
     for i, v in enumerate(inputs):
-        uncontracted_indices[v] = [1 + 2*i]
-    
+        uncontracted_indices[v] = [1 + 2 * i]
+
     for i,curr_row in enumerate(sorted(verts_row.keys())):
         for v in sorted(verts_row[curr_row]):
             neigh = list(g.neighbors(v))
             arity = len(neigh)
-            if v in g.inputs:
+            if v in inputs:
                 if types[v] != 0: raise ValueError("Wrong type for input:", v, types[v])
                 continue # inputs already taken care of
-            if v in g.outputs: 
+            if v in outputs:
                 #print("output")
                 if arity != 1: raise ValueError("Weird output")
                 if types[v] != 0: raise ValueError("Wrong type for output:",v, types[v])
@@ -178,211 +184,213 @@ def tensorfy(g: 'BaseGraph[VT,ET]', preserve_scalar:bool=True) -> np.ndarray:
     if preserve_scalar: tensor *= g.scalar.to_number()
 
     perm = []
-    for o in sorted(g.outputs, key=g.qubit):
+    for o in sorted(outputs, key=g.qubit):
         assert(len(uncontracted_indices[o]) == 1)
         perm.append(uncontracted_indices[o][0])
-    for i in range(len(g.inputs)):
+    for i in range(len(inputs)):
         perm.append(i)
 
     tensor = np.transpose(tensor, perm)
 
     # Test that sparse works
-    sparse_tensor = tensorfy_scipy(g, preserve_scalar)
-    assert (sparse_tensor == tensor)
+    # TODO : Alexandru
+    # sparse_tensor = tensorfy_scipy(g, preserve_scalar)
+    # assert (sparse_tensor == tensor)
 
     return tensor
 
-
-def sparse_tensordot(a, b, axes=2):
-
-    try:
-        iter(axes)
-    except TypeError:
-        axes_a = list(range(-axes, 0))
-        axes_b = list(range(0, axes))
-    else:
-        axes_a, axes_b = axes
-    try:
-        na = len(axes_a)
-        axes_a = list(axes_a)
-    except TypeError:
-        axes_a = [axes_a]
-        na = 1
-    try:
-        nb = len(axes_b)
-        axes_b = list(axes_b)
-    except TypeError:
-        axes_b = [axes_b]
-        nb = 1
-
-        # a, b = asarray(a), asarray(b)  # <--- modified
-    as_ = a.shape
-    nda = a.ndim # is this always 2?
-    bs = b.shape
-    ndb = b.ndim # is this always 2?
-
-    equal = True
-    if nda == 0 or ndb == 0:
-        pos = int(nda != 0)
-        raise ValueError(
-            "Input {} operand does not have enough dimensions".format(pos))
-    if na != nb:
-        equal = False
-    else:
-        for k in range(na):
-            if as_[axes_a[k]] != bs[axes_b[k]]:
-                equal = False
-                break
-            if axes_a[k] < 0:
-                axes_a[k] += nda
-            if axes_b[k] < 0:
-                axes_b[k] += ndb
-    if not equal:
-        raise ValueError("shape-mismatch for sum")
-
-    # Move the axes to sum over to the end of "a"
-    # and to the front of "b"
-    notin = [k for k in range(nda) if k not in axes_a]
-    newaxes_a = notin + axes_a
-    N2 = 1
-    for axis in axes_a:
-        N2 *= as_[axis]
-    newshape_a = (-1, N2)
-    olda = [as_[axis] for axis in notin]
-
-    notin = [k for k in range(ndb) if k not in axes_b]
-    newaxes_b = axes_b + notin
-    N2 = 1
-    for axis in axes_b:
-        N2 *= bs[axis]
-    newshape_b = (N2, -1)
-    oldb = [bs[axis] for axis in notin]
-
-    print(newaxes_a)
-    print(newaxes_b)
-
-    # at = a.transpose(newaxes_a).reshape(newshape_a)
-    # bt = b.transpose(newaxes_b).reshape(newshape_b)
-    at = a.transpose().reshape(newshape_a)
-    bt = b.transpose().reshape(newshape_b)
-    res = at.dot(bt)
-
-    print(olda + oldb)
-    return res.reshape(olda + oldb)
-
-
-def tensorfy_scipy(g: 'BaseGraph[VT,ET]', preserve_scalar: bool = True) -> np.ndarray:
-
-    from scipy.sparse import csr_matrix
-
-    """Takes in a Graph and outputs a multidimensional numpy array
-    representing the linear map the ZX-diagram implements.
-    Beware that quantum circuits take exponential memory to represent."""
-    rows = g.rows()
-    phases = g.phases()
-    types = g.types()
-    depth = g.depth()
-    verts_row: Dict[FloatInt, List['VT']] = {}
-    for v in g.vertices():
-        curr_row = rows[v]
-        if curr_row in verts_row:
-            verts_row[curr_row].append(v)
-        else:
-            verts_row[curr_row] = [v]
-
-    if not g.inputs and not g.outputs:
-        if any(g.type(v) == VertexType.BOUNDARY for v in g.vertices()):
-            raise ValueError(
-                "Diagram contains BOUNDARY-type vertices, but has no inputs or outputs set. Perhaps call g.auto_detect_inputs() first?")
-
-    had = csr_matrix(1 / sqrt(2) * np.array([[1, 1], [1, -1]]))
-    id2 = csr_matrix(np.identity(2))
-
-    tensor = csr_matrix(np.array(1.0, dtype='complex128'))
-    qubits = len(g.inputs)
-    for i in range(qubits): tensor = sparse_tensordot(tensor, id2, axes=0)
-
-    inputs = sorted(g.inputs, key=g.qubit)
-    uncontracted_indices = {}
-    for i, v in enumerate(inputs):
-        uncontracted_indices[v] = [1 + 2 * i]
-
-    for i, curr_row in enumerate(sorted(verts_row.keys())):
-        for v in sorted(verts_row[curr_row]):
-            neigh = list(g.neighbors(v))
-            arity = len(neigh)
-            if v in g.inputs:
-                if types[v] != 0: raise ValueError("Wrong type for input:", v,
-                                                   types[v])
-                continue  # inputs already taken care of
-            if v in g.outputs:
-                # print("output")
-                if arity != 1: raise ValueError("Weird output")
-                if types[v] != 0: raise ValueError("Wrong type for output:", v,
-                                                   types[v])
-                arity += 1
-                t = id2
-            else:
-                phase = pi * phases[v]
-                if types[v] == 1:
-                    t = Z_to_tensor(arity, phase)
-                elif types[v] == 2:
-                    t = X_to_tensor(arity, phase)
-                elif types[v] == 3:
-                    t = H_to_tensor(arity, phase)
-                else:
-                    raise ValueError(
-                        "Vertex %s has non-ZXH type but is not an input or output" % str(
-                            v))
-
-            # type: ignore # TODO: allow ordering on vertex indices?
-            past_vertices = list(filter(
-                lambda n: rows[n] < curr_row or (rows[n] == curr_row and n < v),
-                neigh))
-
-            edge_type = {n: g.edge_type(g.edge(v, n)) for n in past_vertices}
-            past_vertices.sort(key=lambda n: edge_type[n])
-            for n in past_vertices:
-                if edge_type[n] == EdgeType.HADAMARD:
-                    # Hadamard edges are moved to the last index of t
-                    t = sparse_tensordot(t, had, (0, 0))
-
-            # the last indices in idx_contr_past correspond to hadamard contractions
-            # These are the indices in the total tensor that will be contracted
-            idx_contr_past = pop_and_shift_uncontracted_indices(past_vertices,
-                                                                uncontracted_indices)
-
-            # The last axes in the tensor t are the one that will be contracted
-            idx_contr_curr = list(
-                range(len(t.shape) - len(idx_contr_past), len(t.shape)))
-            print(idx_contr_past, idx_contr_curr)
-
-            tensor = sparse_tensordot(tensor, t,
-                                  axes=(idx_contr_past, idx_contr_curr))
-
-            # For the vertex v the indices that remain uncontracted are the last ones
-            nr_remainining_indices = (arity - len(idx_contr_past))
-            uncontracted_indices[v] = list(
-                range(len(tensor.shape) - nr_remainining_indices,
-                      len(tensor.shape)))
-
-            if not preserve_scalar and i % 10 == 0:
-                if np.abs(
-                        tensor).max() < 10 ** -6:  # Values are becoming too small
-                    tensor *= 10 ** 4  # So scale all the numbers up
-
-    if preserve_scalar: tensor *= g.scalar.to_number()
-
-    perm = []
-    for o in sorted(g.outputs, key=g.qubit):
-        assert (len(uncontracted_indices[o]) == 1)
-        perm.append(uncontracted_indices[o][0])
-    for i in range(len(g.inputs)):
-        perm.append(i)
-
-    tensor = tensor.transpose(perm)
-
-    return tensor.todense()
+# TODO: Alexandru
+# Commented in latest pyzx versions. Are these needed?
+# def sparse_tensordot(a, b, axes=2):
+#
+#     try:
+#         iter(axes)
+#     except TypeError:
+#         axes_a = list(range(-axes, 0))
+#         axes_b = list(range(0, axes))
+#     else:
+#         axes_a, axes_b = axes
+#     try:
+#         na = len(axes_a)
+#         axes_a = list(axes_a)
+#     except TypeError:
+#         axes_a = [axes_a]
+#         na = 1
+#     try:
+#         nb = len(axes_b)
+#         axes_b = list(axes_b)
+#     except TypeError:
+#         axes_b = [axes_b]
+#         nb = 1
+#
+#         # a, b = asarray(a), asarray(b)  # <--- modified
+#     as_ = a.shape
+#     nda = a.ndim # is this always 2?
+#     bs = b.shape
+#     ndb = b.ndim # is this always 2?
+#
+#     equal = True
+#     if nda == 0 or ndb == 0:
+#         pos = int(nda != 0)
+#         raise ValueError(
+#             "Input {} operand does not have enough dimensions".format(pos))
+#     if na != nb:
+#         equal = False
+#     else:
+#         for k in range(na):
+#             if as_[axes_a[k]] != bs[axes_b[k]]:
+#                 equal = False
+#                 break
+#             if axes_a[k] < 0:
+#                 axes_a[k] += nda
+#             if axes_b[k] < 0:
+#                 axes_b[k] += ndb
+#     if not equal:
+#         raise ValueError("shape-mismatch for sum")
+#
+#     # Move the axes to sum over to the end of "a"
+#     # and to the front of "b"
+#     notin = [k for k in range(nda) if k not in axes_a]
+#     newaxes_a = notin + axes_a
+#     N2 = 1
+#     for axis in axes_a:
+#         N2 *= as_[axis]
+#     newshape_a = (-1, N2)
+#     olda = [as_[axis] for axis in notin]
+#
+#     notin = [k for k in range(ndb) if k not in axes_b]
+#     newaxes_b = axes_b + notin
+#     N2 = 1
+#     for axis in axes_b:
+#         N2 *= bs[axis]
+#     newshape_b = (N2, -1)
+#     oldb = [bs[axis] for axis in notin]
+#
+#     print(newaxes_a)
+#     print(newaxes_b)
+#
+#     # at = a.transpose(newaxes_a).reshape(newshape_a)
+#     # bt = b.transpose(newaxes_b).reshape(newshape_b)
+#     at = a.transpose().reshape(newshape_a)
+#     bt = b.transpose().reshape(newshape_b)
+#     res = at.dot(bt)
+#
+#     print(olda + oldb)
+#     return res.reshape(olda + oldb)
+#
+#
+# def tensorfy_scipy(g: 'BaseGraph[VT,ET]', preserve_scalar: bool = True) -> np.ndarray:
+#
+#     from scipy.sparse import csr_matrix
+#
+#     """Takes in a Graph and outputs a multidimensional numpy array
+#     representing the linear map the ZX-diagram implements.
+#     Beware that quantum circuits take exponential memory to represent."""
+#     rows = g.rows()
+#     phases = g.phases()
+#     types = g.types()
+#     depth = g.depth()
+#     verts_row: Dict[FloatInt, List['VT']] = {}
+#     for v in g.vertices():
+#         curr_row = rows[v]
+#         if curr_row in verts_row:
+#             verts_row[curr_row].append(v)
+#         else:
+#             verts_row[curr_row] = [v]
+#
+#     if not g.inputs and not g.outputs:
+#         if any(g.type(v) == VertexType.BOUNDARY for v in g.vertices()):
+#             raise ValueError(
+#                 "Diagram contains BOUNDARY-type vertices, but has no inputs or outputs set. Perhaps call g.auto_detect_inputs() first?")
+#
+#     had = csr_matrix(1 / sqrt(2) * np.array([[1, 1], [1, -1]]))
+#     id2 = csr_matrix(np.identity(2))
+#
+#     tensor = csr_matrix(np.array(1.0, dtype='complex128'))
+#     qubits = len(g.inputs)
+#     for i in range(qubits): tensor = sparse_tensordot(tensor, id2, axes=0)
+#
+#     inputs = sorted(g.inputs, key=g.qubit)
+#     uncontracted_indices = {}
+#     for i, v in enumerate(inputs):
+#         uncontracted_indices[v] = [1 + 2 * i]
+#
+#     for i, curr_row in enumerate(sorted(verts_row.keys())):
+#         for v in sorted(verts_row[curr_row]):
+#             neigh = list(g.neighbors(v))
+#             arity = len(neigh)
+#             if v in g.inputs:
+#                 if types[v] != 0: raise ValueError("Wrong type for input:", v,
+#                                                    types[v])
+#                 continue  # inputs already taken care of
+#             if v in g.outputs:
+#                 # print("output")
+#                 if arity != 1: raise ValueError("Weird output")
+#                 if types[v] != 0: raise ValueError("Wrong type for output:", v,
+#                                                    types[v])
+#                 arity += 1
+#                 t = id2
+#             else:
+#                 phase = pi * phases[v]
+#                 if types[v] == 1:
+#                     t = Z_to_tensor(arity, phase)
+#                 elif types[v] == 2:
+#                     t = X_to_tensor(arity, phase)
+#                 elif types[v] == 3:
+#                     t = H_to_tensor(arity, phase)
+#                 else:
+#                     raise ValueError(
+#                         "Vertex %s has non-ZXH type but is not an input or output" % str(
+#                             v))
+#
+#             # type: ignore # TODO: allow ordering on vertex indices?
+#             past_vertices = list(filter(
+#                 lambda n: rows[n] < curr_row or (rows[n] == curr_row and n < v),
+#                 neigh))
+#
+#             edge_type = {n: g.edge_type(g.edge(v, n)) for n in past_vertices}
+#             past_vertices.sort(key=lambda n: edge_type[n])
+#             for n in past_vertices:
+#                 if edge_type[n] == EdgeType.HADAMARD:
+#                     # Hadamard edges are moved to the last index of t
+#                     t = sparse_tensordot(t, had, (0, 0))
+#
+#             # the last indices in idx_contr_past correspond to hadamard contractions
+#             # These are the indices in the total tensor that will be contracted
+#             idx_contr_past = pop_and_shift_uncontracted_indices(past_vertices,
+#                                                                 uncontracted_indices)
+#
+#             # The last axes in the tensor t are the one that will be contracted
+#             idx_contr_curr = list(
+#                 range(len(t.shape) - len(idx_contr_past), len(t.shape)))
+#             print(idx_contr_past, idx_contr_curr)
+#
+#             tensor = sparse_tensordot(tensor, t,
+#                                   axes=(idx_contr_past, idx_contr_curr))
+#
+#             # For the vertex v the indices that remain uncontracted are the last ones
+#             nr_remainining_indices = (arity - len(idx_contr_past))
+#             uncontracted_indices[v] = list(
+#                 range(len(tensor.shape) - nr_remainining_indices,
+#                       len(tensor.shape)))
+#
+#             if not preserve_scalar and i % 10 == 0:
+#                 if np.abs(
+#                         tensor).max() < 10 ** -6:  # Values are becoming too small
+#                     tensor *= 10 ** 4  # So scale all the numbers up
+#
+#     if preserve_scalar: tensor *= g.scalar.to_number()
+#
+#     perm = []
+#     for o in sorted(g.outputs, key=g.qubit):
+#         assert (len(uncontracted_indices[o]) == 1)
+#         perm.append(uncontracted_indices[o][0])
+#     for i in range(len(g.inputs)):
+#         perm.append(i)
+#
+#     tensor = tensor.transpose(perm)
+#
+#     return tensor.todense()
 
 def tensor_to_matrix(t: np.ndarray, inputs: int, outputs: int) -> np.ndarray:
     """Takes a tensor generated by ``tensorfy`` and turns it into a matrix.
@@ -508,4 +516,4 @@ def is_unitary(g: 'BaseGraph') -> bool:
     from .generate import identity # Imported here to prevent circularity
     adj = g.adjoint()
     adj.compose(g)
-    return compare_tensors(adj.to_tensor(), identity(len(g.inputs),2).to_tensor(), False)
+    return compare_tensors(adj.to_tensor(), identity(len(g.inputs()),2).to_tensor(), False)

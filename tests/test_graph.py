@@ -24,7 +24,8 @@ if __name__ == '__main__':
     sys.path.append('..')
     sys.path.append('.')
 
-from pyzx.graph import Graph, EdgeType, VertexType
+from pyzx.graph import Graph
+from pyzx.utils import EdgeType, VertexType
 from pyzx.generate import identity
 
 try:
@@ -72,10 +73,15 @@ class TestGraphBasicMethods(unittest.TestCase):
     def test_set_attributes(self):
         g = Graph()
         v = g.add_vertex()
+        self.assertEqual(g.phase(v),0)
         g.set_phase(v,1)
         self.assertEqual(g.phase(v),1)
-        g.set_type(v,2)
-        self.assertEqual(g.type(v),2)
+        self.assertEqual(g.type(v),VertexType.BOUNDARY)
+        g.set_type(v,VertexType.X)
+        self.assertEqual(g.type(v),VertexType.X)
+        self.assertFalse(g.is_ground(v))
+        g.set_ground(v)
+        self.assertTrue(g.is_ground(v))
         g.set_row(v,3)
         self.assertEqual(g.row(v),3)
         g.set_qubit(v,2)
@@ -166,12 +172,12 @@ class TestGraphCircuitMethods(unittest.TestCase):
         g = self.graph
         i1 = g.add_vertex(VertexType.BOUNDARY,0,0) #add_vertex(type,qubit_index,row_index,phase=0)
         i2 = g.add_vertex(VertexType.BOUNDARY,1,0)
-        g.inputs = [i1,i2]
+        g.set_inputs((i1,i2))
         v = g.add_vertex(VertexType.Z,0,1,Fraction(1,2))
         w = g.add_vertex(VertexType.X,1,1,Fraction(1,1))
         o1 = g.add_vertex(VertexType.BOUNDARY,0,2)
         o2 = g.add_vertex(VertexType.BOUNDARY,1,2)
-        g.outputs = [o1, o2]
+        g.set_outputs((o1, o2))
         g.add_edges([(i1,v),(i2,w),(v,w),(v,o1),(w,o2)])
         self.i1, self.i2, self.v, self.w, self.o1, self.o2 = i1, i2, v, w, o1, o2
 
@@ -196,7 +202,7 @@ class TestGraphCircuitMethods(unittest.TestCase):
     def test_compose_basic(self):
         g = self.graph.copy()
         g.compose(g)
-        self.assertEqual((len(g.inputs),len(g.outputs)),(2,2))
+        self.assertEqual((g.num_inputs(),g.num_outputs()),(2,2))
 
     @unittest.skipUnless(np, "numpy needs to be installed for this to run")
     def test_compose_unitary(self):

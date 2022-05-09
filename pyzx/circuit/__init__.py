@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import os
-from typing import List, Union, Optional, Iterator
+from typing import List, Union, Optional, Iterator, Dict
 
 try:
     import cupy as np
@@ -23,7 +23,7 @@ except:
     import numpy as np
 
 
-from .gates import Gate, gate_types, ZPhase, XPhase, CZ, CX, CNOT, HAD, SWAP, CCZ, Tofolli
+from .gates import Gate, gate_types, ZPhase, XPhase, CZ, CX, CNOT, HAD, SWAP, CCZ, Tofolli, Measurement
 
 from ..graph.base import BaseGraph
 
@@ -43,28 +43,28 @@ class Circuit(object):
     The methods in this class that convert a specification of a circuit into an instance of this class,
     generally do not check whether the specification is well-defined. If a bad input is given,
     the behaviour is undefined."""
-    def __init__(self, qubit_amount: int, name: str = '') -> None:
+    def __init__(self, qubit_amount: int, name: str = '', bit_amount: Optional[int] = None) -> None:
         self.qubits: int        = qubit_amount
+        self.bits: int = 0 if bit_amount is None else bit_amount
         self.gates:  List[Gate] = []
         self.name:   str        = name
-
 
     ### BASIC FUNCTIONALITY
 
 
     def __str__(self) -> str:
-        return "Circuit({!s} qubits, {!s} gates)".format(self.qubits,len(self.gates))
+        return "Circuit({!s} qubits, {!s} bits, {!s} gates)".format(self.qubits,self.bits,len(self.gates))
 
     def __repr__(self) -> str:
         return str(self)
 
     def copy(self) -> 'Circuit':
-        c = Circuit(self.qubits, self.name)
+        c = Circuit(self.qubits, self.name, self.bits)
         c.gates = [g.copy() for g in self.gates]
         return c
 
     def adjoint(self) -> 'Circuit':
-        c = Circuit(self.qubits, self.name + 'Adjoint')
+        c = Circuit(self.qubits, self.name + 'Adjoint', self.bits)
         for g in reversed(self.gates):
             c.gates.append(g.to_adjoint())
         return c
@@ -85,6 +85,10 @@ class Circuit(object):
             up_to_swaps: if set to True, only checks equality up to a permutation of the qubits.
 
         """
+        if self.bits or other.bits:
+            # TODO once full_gnd_reduce is merged
+            raise NotImplementedError("The equality verification does not support hybrid circuits.")
+
         from ..simplify import full_reduce
         c = self.adjoint()
         c.add_circuit(other)
@@ -94,7 +98,7 @@ class Circuit(object):
             if up_to_swaps:
                 return True
             else:
-                return all(g.connected(v,w) for v,w in zip(g.inputs,g.outputs))
+                return all(g.connected(v,w) for v,w in zip(g.inputs(),g.outputs()))
         else:
             return False
 
@@ -132,11 +136,12 @@ class Circuit(object):
         for g in gates.split(" "):
             self.add_gate(g, qubit)
 
-    def add_circuit(self, circ: 'Circuit', mask: Optional[List[int]]=None) -> None:
+    def add_circuit(self, circ: 'Circuit', mask: Optional[List[int]]=None, bit_mask: Optional[List[int]]=None) -> None:
         """Adds the gate of another circuit to this one. If ``mask`` is not given,
         then they must have the same amount of qubits and they are mapped one-to-one.
         If mask is given then it must be a list specifying to which qubits the qubits
-        in the given circuit correspond.
+        in the given circuit correspond. Similarly, if ``bit_mask`` is not given,
+        then they must have the same amount of bits.
 
         Example::
 
@@ -152,13 +157,23 @@ class Circuit(object):
             c1 += c2
 
         """
-        if not mask:
-            if self.qubits != circ.qubits: raise TypeError("Amount of qubits do not match")
+        if mask is None and bit_mask is None:
+            if self.qubits != circ.qubits:
+                raise TypeError("Amount of qubits do not match")
+            if self.bits != circ.bits:
+                raise TypeError("Amount of bits do not match")
             self.gates.extend([g.copy() for g in circ.gates])
             return
-        elif len(mask) != circ.qubits: raise TypeError("Mask size does not match qubits")
+        if mask is None:
+            mask = list(range(self.qubits))
+        if bit_mask is None:
+            bit_mask = list(range(self.bits))
+        if len(mask) != circ.qubits:
+            raise TypeError("Mask size does not match qubits")
+        if len(bit_mask) != circ.bits:
+            raise TypeError("Bit mask size does not match bits")
         for gate in circ.gates:
-            g = gate.reposition(mask)
+            g = gate.reposition(mask, bit_mask)
             self.add_gate(g)
 
     def tensor(self, other: CircuitLike) -> 'Circuit':
@@ -173,7 +188,8 @@ class Circuit(object):
         c = Circuit(self.qubits + other.qubits)
         c.gates = [g.copy() for g in self.gates]
         mask = [i+self.qubits for i in range(other.qubits)]
-        c.gates.extend([g.reposition(mask) for g in other.gates])
+        bit_mask = [i+self.bits for i in range(other.bits)]
+        c.gates.extend([g.reposition(mask, bit_mask) for g in other.gates])
         return c
 
     def to_basic_gates(self) -> 'Circuit':
@@ -263,7 +279,7 @@ class Circuit(object):
 
     def to_emoji(self) -> str:
         """Converts circuit into a representation that can be copy-pasted
-    	into the ZX-calculus Discord server."""
+        into the ZX-calculus Discord server."""
         from .emojiparser import circuit_to_emoji
         return circuit_to_emoji(self)
 
@@ -416,6 +432,8 @@ class Circuit(object):
         {} 2-qubit gates ({} CNOT, {} other) and
         {} Hadamard gates.""".format(d["name"], d["qubits"], d["gates"],
                 d["tcount"], d["clifford"], d["twoqubit"], d["cnot"], d["twoqubit"] - d["cnot"], d["had"])
+        if d["measurement"] > 0:
+            s += "\nThere are {} measurement gates".format(d["measurement"])
         if d["other"] > 0:
             s += "\nThere are {} gates of a different type".format(d["other"])
         if depth:
@@ -431,6 +449,7 @@ class Circuit(object):
         twoqubit = 0
         hadamard = 0
         clifford = 0
+        measurement = 0
         other = 0
         cnot = 0
         for g in self.gates:
@@ -445,9 +464,12 @@ class Circuit(object):
                 twoqubit += 1
                 clifford += 1
                 if isinstance(g, CNOT): cnot += 1
+            elif isinstance(g, Measurement):
+                measurement += 1
             else:
                 other += 1
-        d = dict()
+        d : Dict[str, Union[str,int]] = dict()
+        d["name"] = self.name
         d["qubits"] = self.qubits
         d["gates"] = total
         d["tcount"] = tcount
@@ -455,6 +477,7 @@ class Circuit(object):
         d["twoqubit"] = twoqubit
         d["cnot"] = cnot
         d["had"] = hadamard
+        d["measurement"] = measurement
         d["other"] = other
         d["depth"] = 0
         d["depth_cz"] = 0

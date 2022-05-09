@@ -204,11 +204,11 @@ class ZXEditorWidget(widgets.DOMWidget):
 			self.scalar_view.value = "Scalar: " + s
 		if not self.show_matrix: return
 		try:
-			self.graph.auto_detect_inputs()
+			self.graph.auto_detect_io()
 		except TypeError:
 			self.matrix_view.value = "Couldn't parse inputs or outputs"
 			return
-		if len(self.graph.inputs) > 4 or len(self.graph.outputs) > 4:
+		if self.graph.num_inputs() > 4 or self.graph.num_outputs() > 4:
 			self.matrix_view.value = "Matrix too large to show"
 			return
 		try:

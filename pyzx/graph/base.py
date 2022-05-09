@@ -80,8 +80,8 @@ class BaseGraph(Generic[VT, ET], metaclass=DocstringMeta):
 
     def __init__(self) -> None:
         self.scalar: Scalar = Scalar()
-        self.inputs: List[VT] = []
-        self.outputs: List[VT] = []
+        # self.inputs: List[VT] = []
+        # self.outputs: List[VT] = []
         #Data necessary for phase tracking for phase teleportation
         self.track_phases: bool = False
         self.phase_index : Dict[VT,int] = dict() # {vertex:index tracking its phase for phase teleportation}
@@ -159,13 +159,17 @@ class BaseGraph(Generic[VT, ET], metaclass=DocstringMeta):
             vtab[v] = i
             for k in self.vdata_keys(v):
                 g.set_vdata(i, k, self.vdata(v, k))
+        for v in self.grounds():
+            g.set_ground(vtab[v], True)
 
-        for i in self.inputs:
-            if adjoint: g.outputs.append(vtab[i])
-            else: g.inputs.append(vtab[i])
-        for o in self.outputs:
-            if adjoint: g.inputs.append(vtab[o])
-            else: g.outputs.append(vtab[o])
+        new_inputs = tuple(vtab[i] for i in self.inputs())
+        new_outputs = tuple(vtab[i] for i in self.outputs())
+        if not adjoint:
+            g.set_inputs(new_inputs)
+            g.set_outputs(new_outputs)
+        else:
+            g.set_inputs(new_outputs)
+            g.set_outputs(new_inputs)
         
         etab = {e:g.edge(vtab[self.edge_s(e)],vtab[self.edge_t(e)]) for e in self.edges()}
         g.add_edges(etab.values())
@@ -206,13 +210,15 @@ class BaseGraph(Generic[VT, ET], metaclass=DocstringMeta):
         The graphs are glued together based on the qubit index of the vertices."""
         qleft = [v for v in self.vertices() if self.row(v)==left_row]
         qright= [v for v in self.vertices() if self.row(v)==right_row]
-        if len(qleft) != len(replace.inputs):
+        r_inputs = replace.inputs()
+        r_outputs = replace.outputs()
+        if len(qleft) != len(r_inputs):
             raise TypeError("Inputs do not match glueing vertices")
-        if len(qright) != len(replace.outputs):
+        if len(qright) != len(r_outputs):
             raise TypeError("Outputs do not match glueing vertices")
-        if set(self.qubit(v) for v in qleft) != set(replace.qubit(v) for v in replace.inputs):
+        if set(self.qubit(v) for v in qleft) != set(replace.qubit(v) for v in r_inputs):
             raise TypeError("Input qubit indices do not match")
-        if set(self.qubit(v) for v in qright)!= set(replace.qubit(v) for v in replace.outputs):
+        if set(self.qubit(v) for v in qright)!= set(replace.qubit(v) for v in r_outputs):
             raise TypeError("Output qubit indices do not match")
         
         self.remove_vertices([v for v in self.vertices() if (left_row < self.row(v) and self.row(v) < right_row)])
@@ -223,13 +229,16 @@ class BaseGraph(Generic[VT, ET], metaclass=DocstringMeta):
 
         vtab = {}
         for v in replace.vertices():
-            if v in replace.inputs or v in replace.outputs: continue
-            vtab[v] = self.add_vertex(replace.type(v),replace.qubit(v),
-                                replace.row(v)+left_row,replace.phase(v))
-        for v in replace.inputs:
+            if v in r_inputs or v in r_outputs: continue
+            vtab[v] = self.add_vertex(replace.type(v),
+                                      replace.qubit(v),
+                                      replace.row(v)+left_row,
+                                      replace.phase(v),
+                                      replace.is_ground(v))
+        for v in r_inputs:
             vtab[v] = [i for i in qleft if self.qubit(i) == replace.qubit(v)][0]
 
-        for v in replace.outputs:
+        for v in r_outputs:
             vtab[v] = [i for i in qright if self.qubit(i) == replace.qubit(v)][0]
 
         etab = {e:self.edge(vtab[replace.edge_s(e)],vtab[replace.edge_t(e)]) for e in replace.edges()}
@@ -240,14 +249,16 @@ class BaseGraph(Generic[VT, ET], metaclass=DocstringMeta):
     def compose(self, other: 'BaseGraph') -> None:
         """Inserts a graph after this one. The amount of qubits of the graphs must match.
         Also available by the operator `graph1 + graph2`"""
-        if len(self.outputs) != len(other.inputs):
+        outputs = self.outputs()
+        inputs = other.inputs()
+        if len(outputs) != len(inputs):
             raise TypeError("Outputs of first graph must match inputs of second.")
         other = other.copy()
 
         plugs: List[Tuple[VT,VT,EdgeType.Type]] = []
-        for k in range(len(self.outputs)):
-            o = self.outputs[k]
-            i = other.inputs[k]
+        for k in range(len(outputs)):
+            o = outputs[k]
+            i = inputs[k]
             if len(self.neighbors(o)) != 1:
                 raise ValueError("Bad output vertex: " + str(o))
             if len(other.neighbors(i)) != 1:
@@ -265,26 +276,26 @@ class BaseGraph(Generic[VT, ET], metaclass=DocstringMeta):
                     if other.type(v) != VertexType.BOUNDARY), default=0)
         offset = maxr - minr + 1
 
-        for v in self.outputs:
+        for v in outputs:
             self.remove_vertex(v)
 
         vtab : Dict[VT,VT] = dict()
         for v in other.vertices():
-            if not v in other.inputs:
+            if not v in inputs:
                 vtab[v] = self.add_vertex(other.type(v),
                         phase=other.phase(v),
                         qubit=other.qubit(v),
                         row=offset + other.row(v))
         for e in other.edges():
             s,t = other.edge_st(e)
-            if not s in other.inputs and not t in other.inputs:
+            if not s in inputs and not t in inputs:
                 self.add_edge(self.edge(vtab[s],vtab[t]),
                         edgetype=other.edge_type(e))
 
         for (no,ni,et) in plugs:
             self.add_edge_smart(self.edge(no,vtab[ni]), edgetype=et)
 
-        self.outputs = [vtab[v] for v in other.outputs]
+        self.set_outputs(tuple(vtab[v] for v in other.outputs()))
 
 
 
@@ -300,22 +311,23 @@ class BaseGraph(Generic[VT, ET], metaclass=DocstringMeta):
         phases = other.phases()
         vertex_map = dict()
         for v in other.vertices():
-            w = g.add_vertex(ts[v],qs[v]+height,rs[v],phases[v])
+            w = g.add_vertex(ts[v],qs[v]+height,rs[v],phases[v],g.is_ground(v))
             vertex_map[v] = w
         for e in other.edges():
             s,t = other.edge_st(e)
             g.add_edge((vertex_map[s],vertex_map[t]),other.edge_type(e))
-        for v in other.inputs:
-            g.inputs.append(vertex_map[v])
-        for v in other.outputs:
-            g.outputs.append(vertex_map[v])
 
-        minr = min((g.row(v) for v in g.inputs), default=1)
-        for v in g.inputs:
+        inputs = g.inputs() + tuple(vertex_map[v] for v in other.inputs())
+        outputs = g.outputs() + tuple(vertex_map[v] for v in other.outputs())
+        g.set_inputs(inputs)
+        g.set_outputs(outputs)
+
+        minr = min((g.row(v) for v in inputs), default=1)
+        for v in inputs:
             g.set_row(v, minr)
 
-        maxr = max((g.row(v) for v in g.outputs), default=1)
-        for v in g.outputs:
+        maxr = max((g.row(v) for v in outputs), default=1)
+        for v in outputs:
             g.set_row(v, maxr)
 
         return g
@@ -386,13 +398,13 @@ class BaseGraph(Generic[VT, ET], metaclass=DocstringMeta):
         a string with every character representing an input state for each qubit.
         The possible types of states are on of '0', '1', '+', '-' for the respective
         kets. If '/' is specified this input is skipped."""
-        if len(state) > len(self.inputs): raise TypeError("Too many input states specified")
-        inputs = self.inputs.copy()
-        self.inputs = []
+        inputs = self.inputs()
+        if len(state) > len(inputs): raise TypeError("Too many input states specified")
+        new_inputs = []
         for i,s in enumerate(state):
             v = inputs[i]
             if s == '/': 
-                self.inputs.append(v)
+                new_inputs.append(v)
                 continue
             if s in ('0', '1'):
                 self.scalar.add_power(-1)
@@ -406,19 +418,20 @@ class BaseGraph(Generic[VT, ET], metaclass=DocstringMeta):
                     self.set_phase(v, Fraction(1))
             else:
                 raise TypeError("Unknown input state " + s)
+        self.set_inputs(tuple(new_inputs))
 
     def apply_effect(self, effect: str) -> None:
         """Inserts an effect into the outputs of the graph. ``effect`` should be
         a string with every character representing an output effect for each qubit.
         The possible types of effects are one of '0', '1', '+', '-' for the respective
         kets. If '/' is specified this output is skipped."""
-        if len(effect) > len(self.outputs): raise TypeError("Too many output effects specified")
-        outputs = self.outputs.copy()
-        self.outputs = []
+        outputs = self.outputs()
+        if len(effect) > len(outputs): raise TypeError("Too many output effects specified")
+        new_outputs = []
         for i,s in enumerate(effect):
             v = outputs[i]
             if s == '/': 
-                self.outputs.append(v)
+                new_outputs.append(v)
                 continue
             if s in ('0', '1'):
                 self.scalar.add_power(-1)
@@ -432,6 +445,7 @@ class BaseGraph(Generic[VT, ET], metaclass=DocstringMeta):
                     self.set_phase(v, Fraction(1))
             else:
                 raise TypeError("Unknown output effect " + s)
+        self.set_outputs(tuple(new_outputs))
 
     def to_tensor(self, preserve_scalar:bool=True) -> np.ndarray:
         """Returns a representation of the graph as a tensor using :func:`~pyzx.tensor.tensorfy`"""
@@ -521,16 +535,15 @@ class BaseGraph(Generic[VT, ET], metaclass=DocstringMeta):
         """Returns whether the graph is just a set of identity wires,
         i.e. a graph where all the vertices are either inputs or outputs,
         and they are connected to each other in a non-permuted manner."""
-        for e in self.edges():
-            s,t = self.edge_st(e)
-            if s in self.inputs and t in self.outputs:
-                if self.inputs.index(s) != self.outputs.index(t):
-                    return False
-            elif t in self.inputs and s in self.outputs:
-                if self.inputs.index(t) != self.outputs.index(s):
-                    return False
-            else:
-                return False
+        inputs = self.inputs()
+        outputs = self.outputs()
+
+        if (len(inputs) != len(outputs) or
+            self.num_vertices() != 2*len(inputs) or
+            self.num_edges() != len(inputs)): return False
+
+        for i in range(len(inputs)):
+            if not self.connected(inputs[i], outputs[i]): return False
         return True
 
     def vindex(self) -> VT:
@@ -552,13 +565,9 @@ class BaseGraph(Generic[VT, ET], metaclass=DocstringMeta):
 
     def qubit_count(self) -> int:
         """Returns the number of inputs of the graph"""
-        return len(self.inputs)
+        return self.num_inputs()
 
-    def auto_detect_inputs(self) -> Tuple[List[VT],List[VT]]:
-        """DEPRECATED: alias for auto_detect_io"""
-        return self.auto_detect_io()
-
-    def auto_detect_io(self) -> Tuple[List[VT],List[VT]]:
+    def auto_detect_io(self):
         """Adds every vertex that is of boundary-type to the list of inputs or outputs.
         Whether it is an input or output is determined by looking whether its neighbor
         is further to the right or further to the left of the input. 
@@ -567,35 +576,36 @@ class BaseGraph(Generic[VT, ET], metaclass=DocstringMeta):
         or if this neighbor is on the same horizontal position.
         """
         ty = self.types()
+        inputs = []
+        outputs = []
         for v in self.vertices():
             if ty[v] != VertexType.BOUNDARY: continue
-            if v in self.inputs or v in self.outputs: continue
+            if v in inputs or v in outputs: continue
             if self.vertex_degree(v) != 1:
                 raise TypeError("Invalid ZX-diagram: Boundary-type vertex does not have unique neighbor")
             w = list(self.neighbors(v))[0]
             if self.row(w) > self.row(v):
-                self.inputs.append(v)
+                inputs.append(v)
             elif self.row(w) < self.row(v):
-                self.outputs.append(v)
+                outputs.append(v)
             else:
                 raise TypeError("Boundary-type vertex at same horizontal position as neighbor. Can't determine whether it is an input or output.")
-        self.inputs = list(filter(lambda v: v in self.vertices(), self.inputs))
-        self.outputs = list(filter(lambda v: v in self.vertices(), self.outputs))
-        self.inputs.sort(key=self.qubit)
-        self.outputs.sort(key=self.qubit)
-        return self.inputs, self.outputs
+        inputs = sorted(filter(lambda v: v in self.vertices(), inputs), key=self.qubit)
+        outputs = sorted(filter(lambda v: v in self.vertices(), outputs), key=self.qubit)
+        self.set_inputs(tuple(inputs))
+        self.set_outputs(tuple(outputs))
 
     def normalize(self) -> None:
         """Puts every node connecting to an input/output at the correct qubit index and row."""
-        if not self.inputs:
-            self.auto_detect_inputs()
+        if self.num_inputs() == 0:
+            self.auto_detect_io()
         max_r = self.depth() - 1
         if max_r <= 2: 
-            for o in self.outputs:
+            for o in self.outputs():
                 self.set_row(o,4)
             max_r = self.depth() -1
         claimed = []
-        for q,i in enumerate(sorted(self.inputs, key=self.qubit)):
+        for q,i in enumerate(sorted(self.inputs(), key=self.qubit)):
             self.set_row(i,0)
             self.set_qubit(i,q)
             #q = self.qubit(i)
@@ -612,7 +622,7 @@ class BaseGraph(Generic[VT, ET], metaclass=DocstringMeta):
                 self.add_edge(self.edge(i,v),toggle_edge(t))
                 self.add_edge(self.edge(v,n),EdgeType.HADAMARD)
                 claimed.append(v)
-        for q, o in enumerate(sorted(self.outputs,key=self.qubit)):
+        for q, o in enumerate(sorted(self.outputs(),key=self.qubit)):
             #q = self.qubit(o)
             self.set_row(o,max_r+1)
             self.set_qubit(o,q)
@@ -637,6 +647,30 @@ class BaseGraph(Generic[VT, ET], metaclass=DocstringMeta):
             g.set_qubit(v,g.qubit(v)+y)
         return g
 
+    def inputs(self) -> Tuple[VT, ...]:
+        """Gets the inputs of the graph."""
+        raise NotImplementedError("Not implemented on backend " + type(self).backend)
+
+    def set_inputs(self, inputs: Tuple[VT, ...]):
+        """Sets the inputs of the graph."""
+        raise NotImplementedError("Not implemented on backend " + type(self).backend)
+
+    def num_inputs(self) -> int:
+        """Gets the number of inputs of the graph."""
+        raise NotImplementedError("Not implemented on backend " + type(self).backend)
+
+    def outputs(self) -> Tuple[VT, ...]:
+        """Gets the outputs of the graph."""
+        raise NotImplementedError("Not implemented on backend " + type(self).backend)
+
+    def set_outputs(self, outputs: Tuple[VT, ...]):
+        """Sets the outputs of the graph."""
+        raise NotImplementedError("Not implemented on backend " + type(self).backend)
+
+    def num_outputs(self) -> int:
+        """Gets the number of outputs of the graph."""
+        raise NotImplementedError("Not implemented on backend " + type(self).backend)
+
     def add_vertices(self, amount: int) -> List[VT]:
         """Add the given amount of vertices, and return the indices of the
         new vertices added to the graph, namely: range(g.vindex() - amount, g.vindex())"""
@@ -646,7 +680,8 @@ class BaseGraph(Generic[VT, ET], metaclass=DocstringMeta):
                    ty:VertexType.Type=VertexType.BOUNDARY, 
                    qubit:FloatInt=-1, 
                    row:FloatInt=-1, 
-                   phase:Optional[FractionLike]=None
+                   phase:Optional[FractionLike]=None,
+                   ground:bool=False
                    ) -> VT:
         """Add a single vertex to the graph and return its index.
         The optional parameters allow you to respectively set
@@ -660,6 +695,8 @@ class BaseGraph(Generic[VT, ET], metaclass=DocstringMeta):
         self.set_row(v, row)
         if phase: 
             self.set_phase(v, phase)
+        if ground:
+            self.set_ground(v, True)
         if self.track_phases:
             self.max_phase_index += 1
             self.phase_index[v] = self.max_phase_index
@@ -729,9 +766,6 @@ class BaseGraph(Generic[VT, ET], metaclass=DocstringMeta):
                 elif t2 == VertexType.Z: # Z & H-box
                     n1 = bool(n1) # parallel regular edges collapse to single wire
                     if n2 > 1: raise ValueError("Parallel H-edges between H-box and Z-spider are not supported")
-                    #if n2 and (n2-1) % 2 == 1: # parallel H-edges also collapse, but each extra one adds a pi phase
-                    #    self.add_to_phase(v2, 1)
-                    #n2 = bool(n2)
                     if n1 and n2:
                         # There is no simple way to deal with a parallel H-edge and regular edge
                         # So we simply add a 2-ary H-box to the graph
@@ -740,15 +774,13 @@ class BaseGraph(Generic[VT, ET], metaclass=DocstringMeta):
                         w = self.add_vertex(VertexType.H_BOX,(q1+q2)/2,(r1+r2)/2-0.5)
                         add[EdgeType.SIMPLE].extend([self.edge(v1,w),self.edge(v2,w)])
                         new_type = EdgeType.SIMPLE
+                        self.scalar.add_power(-1)  # H-boxes are scaled differently than H-edges, so we compensate with 1/sqrt(2) here.
                     elif n1: new_type = EdgeType.SIMPLE
                     elif n2: new_type = EdgeType.HADAMARD
                     else: new_type = None
-                elif t2 == VertexType.X: # X & H-box
-                    n2 = bool(n2) # parallel H-edges collapse to single wire
+                elif t2 == VertexType.X:  # X & H-box
+                    n2 = bool(n2)  # parallel H-edges collapse to single wire
                     if n1 > 1: raise ValueError("Parallel edges between H-box and X-spider are not supported")
-                    #if (n1-1) % 2 == 1: # parallel regular edges also collapse, but each extra one adds a pi phase
-                    #    self.add_to_phase(v2, 1)
-                    #n1 = bool(n1)
                     if n1 and n2:
                         # There is no simple way to deal with a parallel H-edge and regular edge
                         # So we simply add a 2-ary H-box to the graph
@@ -757,6 +789,7 @@ class BaseGraph(Generic[VT, ET], metaclass=DocstringMeta):
                         w = self.add_vertex(VertexType.H_BOX,(q1+q2)/2,(r1+r2)/2-0.5)
                         add[EdgeType.SIMPLE].extend([self.edge(v1,w),self.edge(v2,w)])
                         new_type = EdgeType.SIMPLE
+                        self.scalar.add_power(-1)  # H-boxes are scaled differently than H-edges, so we compensate with 1/sqrt(2) here.
                     elif n1: new_type = EdgeType.SIMPLE
                     elif n2: new_type = EdgeType.HADAMARD
                     else: new_type = None
@@ -945,7 +978,7 @@ class BaseGraph(Generic[VT, ET], metaclass=DocstringMeta):
     def set_type(self, vertex: VT, t: VertexType.Type) -> None:
         """Sets the type of the given vertex to t."""
         raise NotImplementedError("Not implemented on backend" + type(self).backend)
-    
+
     def phase(self, vertex: VT) -> FractionLike:
         """Returns the phase value of the given vertex."""
         raise NotImplementedError("Not implemented on backend" + type(self).backend)
@@ -980,6 +1013,20 @@ class BaseGraph(Generic[VT, ET], metaclass=DocstringMeta):
     def set_row(self, vertex: VT, r: FloatInt) -> None:
         """Sets the row the vertex should be positioned at."""
         raise NotImplementedError("Not implemented on backend" + type(self).backend)
+
+    def is_ground(self, vertex: VT) -> bool:
+        """Returns a boolean indicating if the vertex is connected to a ground."""
+        raise NotImplementedError("Not implemented on backend" + type(self).backend)
+    def grounds(self) -> Set[VT]:
+        """Returns the set of vertices connected to a ground."""
+        raise NotImplementedError("Not implemented on backend" + type(self).backend)
+    def set_ground(self, vertex: VT, flag: bool=True) -> None:
+        """Connect or disconnect the vertex to a ground."""
+        raise NotImplementedError("Not implemented on backend" + type(self).backend)
+    def is_hybrid(self) -> bool:
+        """Returns whether this is a hybrid quantum-classical graph,
+        i.e. a graph with ground generators."""
+        return bool(self.grounds())
 
     def set_position(self, vertex: VT, q: FloatInt, r: FloatInt):
         """Set both the qubit index and row index of the vertex."""

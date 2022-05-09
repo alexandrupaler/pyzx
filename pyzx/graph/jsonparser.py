@@ -76,12 +76,22 @@ def json_to_graph(js: str, backend:Optional[str]=None) -> BaseGraph:
                 g.set_phase(v,_quanto_value_to_phase(d['value']))
             else:
                 g.set_phase(v,Fraction(0,1))
+            if d.get('ground', False):
+                g.set_ground(v)
         else:
             g.set_type(v,VertexType.Z)
             g.set_phase(v,Fraction(0,1))
+        for key, value in attr['annotation'].items():
+            if key == 'coord':
+                continue
+            g.set_vdata(v, key, value)
         
         #g.set_vdata(v, 'x', c[0])
         #g.set_vdata(v, 'y', c[1])
+
+    inputs = []
+    outputs = []
+
     for name,attr in j.get('wire_vertices',{}).items():
         ann = attr['annotation']
         c = ann['coord']
@@ -91,10 +101,17 @@ def json_to_graph(js: str, backend:Optional[str]=None) -> BaseGraph:
         v = g.add_vertex(VertexType.BOUNDARY,q,r)
         g.set_vdata(v,'name',name)
         names[name] = v
-        if "input" in ann and ann["input"]: g.inputs.append(v)
-        if "output" in ann and ann["output"]: g.outputs.append(v)
+        if "input" in ann and ann["input"]: inputs.append(v)
+        if "output" in ann and ann["output"]: outputs.append(v)
         #g.set_vdata(v, 'x', c[0])
         #g.set_vdata(v, 'y', c[1])
+        for key, value in attr['annotation'].items():
+            if key in ('boundary','coord','input','output'):
+                continue
+            g.set_vdata(v, key, value)
+
+    g.set_inputs(tuple(inputs))
+    g.set_outputs(tuple(outputs))
 
     edges: Dict[Any, List[int]] = {} # TODO: Any = ET
     for edge in j.get('undir_edges',{}).values():
@@ -141,6 +158,8 @@ def graph_to_json(g: BaseGraph[VT,ET], include_scalar: bool=True) -> str:
     names: Dict[VT, str] = {}
     freenamesv = ["v"+str(i) for i in range(g.num_vertices()+g.num_edges())]
     freenamesb = ["b"+str(i) for i in range(g.num_vertices())]
+    inputs = g.inputs()
+    outputs = g.outputs()
     for v in g.vertices():
         t = g.type(v)
         coord = [round(g.row(v),3),round(-g.qubit(v),3)]
@@ -158,7 +177,11 @@ def graph_to_json(g: BaseGraph[VT,ET], include_scalar: bool=True) -> str:
         names[v] = name
         if t == VertexType.BOUNDARY:
             wire_vs[name] = {"annotation":{"boundary":True,"coord":coord,
-                                           "input":(v in g.inputs), "output":(v in g.outputs)}}
+                                           "input":(v in inputs), "output":(v in outputs)}}
+            for key in g.vdata_keys(v):
+                if key in wire_vs[name]["annotation"]:
+                    continue
+                wire_vs[name]["annotation"][key] = g.vdata(v, key)
         else:
             node_vs[name] = {"annotation": {"coord":coord},"data":{}}
             if t==VertexType.Z:
@@ -171,7 +194,13 @@ def graph_to_json(g: BaseGraph[VT,ET], include_scalar: bool=True) -> str:
             else: raise Exception("Unkown vertex type "+ str(t))
             phase = _phase_to_quanto_value(g.phase(v))
             if phase: node_vs[name]["data"]["value"] = phase
+            if g.is_ground(v):
+                node_vs[name]["data"]["ground"] = True
             if not node_vs[name]["data"]: del node_vs[name]["data"]
+            for key in g.vdata_keys(v):
+                if key in node_vs[name]["annotation"]:
+                    continue
+                node_vs[name]["annotation"][key] = g.vdata(v, key)
 
     i = 0
     for e in g.edges():

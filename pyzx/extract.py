@@ -107,8 +107,8 @@ def column_optimal_swap(m: Mat2) -> Dict[int,int]:
     return target
 
 def _find_targets(
-        conn: Dict[int,Set[int]], 
-        connr: Dict[int,Set[int]], 
+        conn: Dict[int,Set[int]],
+        connr: Dict[int,Set[int]],
         target:Dict[int,int]={}
         ) -> Optional[Dict[int,int]]:
     """Helper function for :func:`column_optimal_swap`.
@@ -117,10 +117,10 @@ def _find_targets(
     target = target.copy()
     r = len(conn)
     c = len(connr)
-    
+
     claimedcols = set(target.keys())
     claimedrows = set(target.values())
-    
+
     while True:
         min_index = -1
         min_options = set(range(1000))
@@ -469,11 +469,12 @@ def apply_cnots(g: BaseGraph[VT, ET], c: Circuit, frontier: List[VT], qubit_map:
     if not good_verts:
         raise Exception("No extractable vertex found. Something went wrong")
     hads = []
+    outputs = g.outputs()
     for v, w in good_verts.items():  # Update frontier vertices
         hads.append(qubit_map[v])
         # c.add_gate("HAD",qubit_map[v])
         qubit_map[w] = qubit_map[v]
-        b = [o for o in g.neighbors(v) if o in g.outputs][0]
+        b = [o for o in g.neighbors(v) if o in outputs][0]
         g.remove_vertex(v)
         g.add_edge(g.edge(w, b))
         frontier.remove(v)
@@ -493,13 +494,14 @@ def clean_frontier(g: BaseGraph[VT, ET], c: Circuit, frontier: List[VT],
     Returns the number of CZs saved if `optimize_czs` is True; otherwise returns 0"""
     phases = g.phases()
     czs_saved = 0
+    outputs = g.outputs()
     for v in frontier:  # First removing single qubit gates
         q = qubit_map[v]
-        b = [w for w in g.neighbors(v) if w in g.outputs][0]
+        b = [w for w in g.neighbors(v) if w in outputs][0]
         e = g.edge(v, b)
-        if g.edge_type(e) == 2:  # Hadamard edge
+        if g.edge_type(e) == EdgeType.HADAMARD:
             c.add_gate("HAD", q)
-            g.set_edge_type(e, 1)
+            g.set_edge_type(e, EdgeType.SIMPLE)
         if phases[v]:
             c.add_gate("ZPhase", q, phases[v])
             g.set_phase(v, 0)
@@ -544,21 +546,23 @@ def neighbors_of_frontier(g: BaseGraph[VT, ET], frontier: List[VT]) -> Set[VT]:
     qs = g.qubits()
     rs = g.rows()
     neighbor_set = set()
+    inputs = g.inputs()
+    outputs = g.outputs()
     for v in frontier.copy():
-        d = [w for w in g.neighbors(v) if w not in g.outputs]
-        if any(w in g.inputs for w in d):  # frontier vertex v is connected to an input
+        d = [w for w in g.neighbors(v) if w not in outputs]
+        if any(w in inputs for w in d):  # frontier vertex v is connected to an input
             if len(d) == 1:  # Only connected to input, remove from frontier
                 frontier.remove(v)
                 continue
             # We disconnect v from the input b via a new spider
-            b = [w for w in d if w in g.inputs][0]
+            b = [w for w in d if w in inputs][0]
             q = qs[b]
             r = rs[b]
-            w = g.add_vertex(1, q, r + 1)
+            w = g.add_vertex(VertexType.Z, q, r + 1)
             e = g.edge(v, b)
             et = g.edge_type(e)
             g.remove_edge(e)
-            g.add_edge(g.edge(v, w), 2)
+            g.add_edge(g.edge(v, w), EdgeType.HADAMARD)
             g.add_edge(g.edge(w, b), toggle_edge(et))
             d.remove(b)
             d.append(w)
@@ -570,11 +574,12 @@ def remove_gadget(g: BaseGraph[VT, ET], frontier: List[VT], qubit_map: Dict[VT, 
                   neighbor_set: Set[VT], gadgets: Dict[VT, VT]) -> bool:
     """Removes a gadget that is attached to a frontier vertex. Returns True if such gadget was found, False otherwise"""
     removed_gadget = False
+    outputs = g.outputs()
     for w in neighbor_set:
         if w not in gadgets: continue
         for v in g.neighbors(w):
             if v in frontier:
-                apply_rule(g, pivot, [(w, v, [], [o for o in g.neighbors(v) if o in g.outputs])])  # type: ignore
+                apply_rule(g, pivot, [(w, v, [], [o for o in g.neighbors(v) if o in outputs])])  # type: ignore
                 frontier.remove(v)
                 del gadgets[w]
                 frontier.append(w)
@@ -606,20 +611,22 @@ def extract_circuit(
     c = Circuit(g.qubit_count())
 
     gadgets = {}
+    inputs = g.inputs()
+    outputs = g.outputs()
     for v in g.vertices():
-        if g.vertex_degree(v) == 1 and v not in g.inputs and v not in g.outputs:
+        if g.vertex_degree(v) == 1 and v not in inputs and v not in outputs:
             n = list(g.neighbors(v))[0]
             gadgets[n] = v
-    
+
     qubit_map: Dict[VT,int] = dict()
     frontier = []
-    for i, o in enumerate(g.outputs):
+    for i, o in enumerate(outputs):
         v = list(g.neighbors(o))[0]
-        if v in g.inputs:
+        if v in inputs:
             continue
         frontier.append(v)
         qubit_map[v] = i
-        
+
     czs_saved = 0
     q: Union[float, int]
     
@@ -704,10 +711,12 @@ def extract_simple(g: BaseGraph[VT, ET], up_to_perm: bool = True) -> Circuit:
     """
     circ = Circuit(g.qubit_count())
     progress = True
+    # inputs = g.inputs()
+    outputs = g.outputs()
     while progress:
         progress = False
         
-        for q, o in enumerate(g.outputs):
+        for q, o in enumerate(outputs):
             if g.vertex_degree(o) != 1:
                 raise ValueError("Bad output degree")
             v = list(g.neighbors(o))[0]
@@ -732,8 +741,8 @@ def extract_simple(g: BaseGraph[VT, ET], up_to_perm: bool = True) -> Circuit:
                 
         if progress: continue
         
-        for q1,o1 in enumerate(g.outputs):
-            for q2,o2 in enumerate(g.outputs):
+        for q1,o1 in enumerate(outputs):
+            for q2,o2 in enumerate(outputs):
                 if o1 == o2: continue
                 v1 = list(g.neighbors(o1))[0]
                 v2 = list(g.neighbors(o2))[0]
@@ -767,21 +776,22 @@ def graph_to_swaps(g: BaseGraph[VT, ET], no_swaps: bool = False) -> Circuit:
     c = Circuit(g.qubit_count())
     swap_map = {}
     leftover_swaps = False
-    for q,v in enumerate(g.outputs): # check for a last layer of Hadamards, and see if swap gates need to be applied.
+    inputs = g.inputs()
+    outputs = g.outputs()
+    for q,v in enumerate(outputs): # check for a last layer of Hadamards, and see if swap gates need to be applied.
         inp = list(g.neighbors(v))[0]
-        if inp not in g.inputs: 
+        if inp not in inputs: 
             raise TypeError("Algorithm failed: Graph is not fully reduced")
             return c
-        if g.edge_type(g.edge(v,inp)) == 2:
+        if g.edge_type(g.edge(v,inp)) == EdgeType.HADAMARD:
             c.prepend_gate(HAD(q))
             g.set_edge_type(g.edge(v,inp),EdgeType.SIMPLE)
-        q2 = g.inputs.index(inp)
+        q2 = inputs.index(inp)
         if q2 != q: leftover_swaps = True
         swap_map[q] = q2
     if not no_swaps and leftover_swaps:
         for t1, t2 in permutation_as_swaps(swap_map):
             c.prepend_gate(SWAP(t1, t2))
-    #c.gates = list(reversed(c.gates))
     return c
 
 
@@ -1251,16 +1261,18 @@ def lookahead_extract_base(
         hard_limit = best_d
 
     gadgets = {}
+    inputs = g.inputs()
+    outputs = g.outputs()
     for v in g.vertices():
-        if g.vertex_degree(v) == 1 and v not in g.inputs and v not in g.outputs:
+        if g.vertex_degree(v) == 1 and v not in inputs and v not in outputs:
             n = list(g.neighbors(v))[0]
             gadgets[n] = v
 
     qubit_map: Dict[VT, int] = dict()
     frontier = []
-    for i, o in enumerate(g.outputs):
+    for i, o in enumerate(outputs):
         v = list(g.neighbors(o))[0]
-        if v in g.inputs:
+        if v in inputs:
             continue
         frontier.append(v)
         qubit_map[v] = i

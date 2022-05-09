@@ -77,11 +77,13 @@ def pack_circuit_nf(g: BaseGraph[VT,ET], nf:Literal['grg','gslc'] ='grg') -> Non
     x_index = 0
     ty = g.types()
 
+    inputs = g.inputs()
+    outputs = g.outputs()
     if nf == 'grg':
         for v in g.vertices():
-            if v in g.inputs:
+            if v in inputs:
                 g.set_row(v, 0)
-            elif v in g.outputs:
+            elif v in outputs:
                 g.set_row(v, 4)
             elif ty[v] == VertexType.X:
                 g.set_row(v, 2)
@@ -89,27 +91,27 @@ def pack_circuit_nf(g: BaseGraph[VT,ET], nf:Literal['grg','gslc'] ='grg') -> Non
                 x_index += 1
             elif ty[v] == VertexType.Z:
                 for w in g.neighbors(v):
-                    if w in g.inputs:
+                    if w in inputs:
                         g.set_row(v,1)
                         g.set_qubit(v, g.qubit(w))
                         break
-                    elif w in g.outputs:
+                    elif w in outputs:
                         g.set_row(v,3)
                         g.set_qubit(v, g.qubit(w))
                         break
     elif nf == 'gslc':
         for v in g.vertices():
-            if v in g.inputs:
+            if v in inputs:
                 g.set_row(v,0)
-            elif v in g.outputs:
+            elif v in outputs:
                 g.set_row(v, 4)
             elif ty[v] == VertexType.Z:
                 for w in g.neighbors(v):
-                    if w in g.inputs:
+                    if w in inputs:
                         g.set_row(v,1)
                         #g.set_vdata(v, 'q', g.get_vdata(w, 'q'))
                         break
-                    elif w in g.outputs:
+                    elif w in outputs:
                         g.set_row(v,3)
                         #g.set_vdata(v, 'q', g.get_vdata(w, 'q'))
                         break
@@ -256,12 +258,23 @@ def draw_matplotlib(
 # make sure we get a fresh random seed
 random_graphid = random.Random()
 
+# def init_drawing() -> None:
+#     if settings.mode not in ("notebook", "browser"): return
+#
+#     library_code = '<script type="text/javascript">\n'
+#     for lib in ['d3.v5.min.inline.js']:
+#         with open(os.path.join(settings.javascript_location, lib), 'r') as f:
+#             library_code += f.read() + '\n'
+#     library_code += '</script>'
+#     display(HTML(library_code))
+
 def draw_d3(
     g: Union[BaseGraph[VT,ET], Circuit],
     labels:bool=False, 
     scale:Optional[FloatInt]=None, 
     auto_hbox:Optional[bool]=None,
-    show_scalar:bool=False
+    show_scalar:bool=False,
+    vdata: List[str]=[]
     ) -> Any:
 
     if settings.mode not in ("notebook", "browser"): 
@@ -297,30 +310,35 @@ def draw_d3(
               'x': (g.row(v)-minrow + 1) * scale,
               'y': (g.qubit(v)-minqub + 2) * scale,
               't': g.type(v),
-              'phase': phase_to_s(g.phase(v), g.type(v)) }
+              'phase': phase_to_s(g.phase(v), g.type(v)),
+              'ground': g.is_ground(v),
+              'vdata': [(key, g.vdata(v, key))
+                  for key in vdata if g.vdata(v, key, None) is not None],
+              }
              for v in g.vertices()]
     links = [{'source': str(g.edge_s(e)),
               'target': str(g.edge_t(e)),
               't': g.edge_type(e) } for e in g.edges()]
     graphj = json.dumps({'nodes': nodes, 'links': links})
-    with open(os.path.join(settings.javascript_location, 'zx_viewer.js'), 'r') as f:
-        viewer_code = f.read()
+
+    with open(os.path.join(settings.javascript_location, 'zx_viewer.inline.js'), 'r') as f:
+        library_code = f.read() + '\n'
+
     text = """<div style="overflow:auto" id="graph-output-{id}"></div>
-<script type="text/javascript">
-{d3_load}
-{viewer_code}
-</script>
-<script type="text/javascript">
-require(['zx_viewer'], function(zx_viewer) {{
-    zx_viewer.showGraph('#graph-output-{id}',
-    JSON.parse('{graph}'), {width}, {height}, {scale}, {node_size}, {hbox}, {labels}, '{scalar_str}');
-}});
-</script>""".format(id = graph_id, d3_load = settings.d3_load_string, viewer_code=viewer_code, 
+<script type="module">
+var d3;
+if (d3 == null) {{ d3 = await import("https://cdn.skypack.dev/d3@5"); }}
+{library_code}
+showGraph('#graph-output-{id}',
+  JSON.parse('{graph}'), {width}, {height}, {scale},
+  {node_size}, {hbox}, {labels}, '{scalar_str}');
+</script>""".format(library_code=library_code,
+                    id = graph_id,
                     graph = graphj, 
-                   width=w, height=h, scale=scale, node_size=node_size,
-                   hbox = 'true' if auto_hbox else 'false',
-                   labels='true' if labels else 'false',
-                   scalar_str=g.scalar.to_unicode() if show_scalar else '')
+                    width=w, height=h, scale=scale, node_size=node_size,
+                    hbox = 'true' if auto_hbox else 'false',
+                    labels='true' if labels else 'false',
+                    scalar_str=g.scalar.to_unicode() if show_scalar else '')
     if settings.mode == "notebook":
         display(HTML(text))
     else:

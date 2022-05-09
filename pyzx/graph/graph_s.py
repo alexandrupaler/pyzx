@@ -15,7 +15,7 @@
 # limitations under the License.
 
 from fractions import Fraction
-from typing import Tuple, Dict, Any
+from typing import Tuple, Dict, Set, Any
 
 from .base import BaseGraph
 
@@ -38,8 +38,11 @@ class GraphS(BaseGraph[int,Tuple[int,int]]):
         self._maxq: FloatInt                            = -1
         self._rindex: Dict[int, FloatInt]               = dict()
         self._maxr: FloatInt                            = -1
+        self._grounds: Set[int] = set()
 
         self._vdata: Dict[int,Any]                      = dict()
+        self._inputs: Tuple[int, ...]                   = tuple()
+        self._outputs: Tuple[int, ...]                  = tuple()
         
     def clone(self):
         cpy = GraphS()
@@ -73,6 +76,24 @@ class GraphS(BaseGraph[int,Tuple[int,int]]):
         if self._qindex: self._maxq = max(self._qindex.values())
         else: self._maxq = -1
         return self._maxq + 1
+
+    def inputs(self):
+        return self._inputs
+
+    def num_inputs(self):
+        return len(self._inputs)
+
+    def set_inputs(self, inputs):
+        self._inputs = inputs
+
+    def outputs(self):
+        return self._outputs
+
+    def num_outputs(self):
+        return len(self._outputs)
+
+    def set_outputs(self, outputs):
+        self._outputs = outputs
 
     def add_vertices(self, amount):
         for i in range(self._vindex, self._vindex + amount):
@@ -110,12 +131,17 @@ class GraphS(BaseGraph[int,Tuple[int,int]]):
             del self.graph[v]
             del self.ty[v]
             del self._phase[v]
+            if v in self._inputs:
+                self._inputs = tuple(u for u in self._inputs if u != v)
+            if v in self._outputs:
+                self._outputs = tuple(u for u in self._outputs if u != v)
             try: del self._qindex[v]
             except: pass
             try: del self._rindex[v]
             except: pass
             try: del self.phase_index[v]
             except: pass
+            self._grounds.discard(v)
             self._vdata.pop(v,None)
         self._vindex = max(self.vertices(),default=0) + 1
 
@@ -221,7 +247,7 @@ class GraphS(BaseGraph[int,Tuple[int,int]]):
     def set_phase(self, vertex, phase):
         self._phase[vertex] = Fraction(phase) % 2
     def add_to_phase(self, vertex, phase):
-        self._phase[vertex] = (self._phase.get(vertex,Fraction(1)) + phase) % 2
+        self._phase[vertex] = (self._phase.get(vertex,Fraction(1)) + Fraction(phase)) % 2
 
     def qubit(self, vertex):
         return self._qindex.get(vertex,-1)
@@ -238,6 +264,16 @@ class GraphS(BaseGraph[int,Tuple[int,int]]):
     def set_row(self, vertex, r):
         if r > self._maxr: self._maxr = r
         self._rindex[vertex] = r
+
+    def is_ground(self, vertex):
+        return vertex in self._grounds
+    def grounds(self):
+        return self._grounds
+    def set_ground(self, vertex, flag=True):
+        if flag:
+            self._grounds.add(vertex)
+        else:
+            self._grounds.discard(vertex)
 
     def vdata_keys(self, vertex):
         return self._vdata.get(vertex, {}).keys()
