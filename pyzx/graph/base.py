@@ -22,7 +22,10 @@ from typing import TYPE_CHECKING, Union, Optional, Generic, TypeVar, Any, Sequen
 from typing import List, Dict, Set, Tuple, Mapping, Iterable, Callable, ClassVar
 from typing_extensions import Literal, GenericMeta # type: ignore # https://github.com/python/mypy/issues/5753
 
-import numpy as np
+try:
+    import cupy as np
+except:
+    import numpy as np
 
 from ..utils import EdgeType, VertexType, toggle_edge, vertex_is_zx, toggle_vertex
 from ..utils import FloatInt, FractionLike

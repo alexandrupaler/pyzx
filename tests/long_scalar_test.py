@@ -21,8 +21,11 @@ if __name__ == '__main__':
     sys.path.append('..')
     sys.path.append('.')
 
-import numpy as np
-
+try:
+    import cupy as np
+except:
+    import numpy as np
+    
 from pyzx.tensor import compare_tensors
 from pyzx.generate import CNOT_HAD_PHASE_circuit
 from pyzx.simplify import clifford_simp, full_reduce, reduce_scalar

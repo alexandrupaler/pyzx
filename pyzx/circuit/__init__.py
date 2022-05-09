@@ -17,7 +17,11 @@
 import os
 from typing import List, Union, Optional, Iterator
 
-import numpy as np
+try:
+    import cupy as np
+except:
+    import numpy as np
+
 
 from .gates import Gate, gate_types, ZPhase, XPhase, CZ, CX, CNOT, HAD, SWAP, CCZ, Tofolli
 

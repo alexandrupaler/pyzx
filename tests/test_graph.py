@@ -27,7 +27,11 @@ if __name__ == '__main__':
 from pyzx.graph import Graph, EdgeType, VertexType
 from pyzx.generate import identity
 
-import numpy as np
+try:
+    import cupy as np
+except:
+    import numpy as np
+    
 from pyzx.tensor import compare_tensors
 
 

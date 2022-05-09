@@ -26,8 +26,12 @@ import random
 from fractions import Fraction
 from typing import Dict, List, Tuple, Optional, Union, Iterable, Any, TYPE_CHECKING
 from typing_extensions import Literal
-import numpy as np
 
+try:
+    import cupy as np
+except:
+    import numpy as np
+    
 try:
     import matplotlib.pyplot as plt
     from matplotlib import patches, lines, path

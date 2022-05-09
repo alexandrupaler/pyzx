@@ -27,8 +27,11 @@ from fractions import Fraction
 import itertools
 from typing import List, Optional, Dict, Tuple, Any
 
-import numpy as np
-
+try:
+    import cupy as np
+except:
+    import numpy as np
+    
 from .utils import EdgeType, VertexType, toggle_edge
 from . import simplify
 from .circuit import Circuit

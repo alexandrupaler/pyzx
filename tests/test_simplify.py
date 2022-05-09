@@ -23,7 +23,11 @@ if __name__ == '__main__':
     sys.path.append('.')
 
 try:
-    import numpy as np
+    try:
+        import cupy as np
+    except:
+        import numpy as np
+
     from pyzx.tensor import tensorfy, compare_tensors
 except ImportError:
     np = None

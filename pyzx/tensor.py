@@ -32,8 +32,11 @@ from math import pi, sqrt
 from typing import Optional
 
 
-import numpy as np
-np.set_printoptions(suppress=True)
+try:
+    import cupy as np
+except:
+    import numpy as np
+    np.set_printoptions(suppress=True)
 
 # typing imports
 from typing import TYPE_CHECKING, List, Dict, Union
