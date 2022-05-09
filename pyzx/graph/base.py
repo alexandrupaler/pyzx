@@ -460,11 +460,11 @@ class BaseGraph(Generic[VT, ET], metaclass=DocstringMeta):
         import time
 
         t1 = time.time()
-        arr1 = tensor_to_matrix(tensor, len(self.inputs), len(self.outputs))
+        arr1 = tensor_to_matrix(tensor, len(self.inputs()), len(self.outputs()))
         t2 = time.time()
         # return arr1
 
-        q = len(self.outputs)
+        q = len(self.outputs())
         l = list(range(2 * q))
         l1 = [2 * i + 0 for i in range(q)]
         l2 = [2 * i + 1 for i in range(q)]
@@ -474,7 +474,7 @@ class BaseGraph(Generic[VT, ET], metaclass=DocstringMeta):
         # pyZX already permutes these
         # arr2 = np.einsum(tensor, l, l1 + l2).reshape([2**q, 2**len(self.inputs)])
         t3 = time.time()
-        arr2 = tensor.reshape([2 ** q, 2 ** len(self.inputs)])
+        arr2 = tensor.reshape([2 ** q, 2 ** len(self.inputs())])
         t4 = time.time()
 
         # print(arr1)
