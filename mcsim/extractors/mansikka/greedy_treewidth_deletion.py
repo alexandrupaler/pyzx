@@ -6,7 +6,9 @@ from .graph import Graph
 from .treewidth_from_order import find_treewidth_from_order
 
 
-def greedy_treewidth_deletion(target_graph: Graph, elimination_order, m, option=0):
+def greedy_treewidth_deletion(
+    target_graph: Graph, elimination_order, m, option=0, direct_minimization=False
+):
     """ """
     removed_vertices = []
     new_graph = Graph(target_graph.vertices, target_graph.edges)
@@ -14,7 +16,12 @@ def greedy_treewidth_deletion(target_graph: Graph, elimination_order, m, option=
 
     for j in range(m):
 
-        u = removal_recommendation(new_graph, new_order)  # if new order is given direct treewidth metric is used
+        if direct_minimization:
+            u = removal_recommendation(
+                new_graph, new_order
+            )  # if new order is given direct treewidth metric is used
+        else:
+            u = removal_recommendation(new_graph)
 
         # update new graph
 
