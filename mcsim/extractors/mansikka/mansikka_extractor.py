@@ -26,17 +26,13 @@ class MansikkaExtractor(BaseExtractor):
         # print("dual vert:", dual_graph.vertices)
         # print("dual edges: ", dual_graph.edges)
 
-        print("start vertices:", graph.vertices())
+
         contraction_order = get_contraction_order(
             working_graph, self.params["m"], self.params["nr_iter"]
         )
-        print("contraction order:", contraction_order)
 
-        print("old vertices:", graph.vertices())
-        print("old edge_set:", graph.edge_set())
         graph = reorder_indices(graph, contraction_order)
-        print("new vertices:", graph.vertices())
-        print("new edge_set:", graph.edge_set())
+
 
         return graph.to_matrix()
 
