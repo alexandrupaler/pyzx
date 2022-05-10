@@ -21,13 +21,6 @@ class Extractor_Dist(BaseExtractor):
         :return: graph matrix
         """
 
-        # deserialization of parameters#
-        tolerance = self.params["tolerance"]
-        ##
-
-        if show_changes:
-            graph_info(graph, show_changes)
-
         dist = self.distribution_f(self.params)
         graph = fill_degree(graph, dist, tolerance)
 
