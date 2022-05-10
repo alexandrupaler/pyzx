@@ -22,15 +22,21 @@ class MansikkaExtractor(BaseExtractor):
         """
 
         working_graph = Graph([k for k in graph.vertices()], graph.edge_set())
-
-        dual_graph = working_graph.construct_dual()
+        # working_graph = working_graph.construct_dual()
         # print("dual vert:", dual_graph.vertices)
         # print("dual edges: ", dual_graph.edges)
 
+        print("start vertices:", graph.vertices())
         contraction_order = get_contraction_order(
-            dual_graph, self.params["m"], self.params["nr_iter"]
+            working_graph, self.params["m"], self.params["nr_iter"]
         )
-        # print("contraction order:", contraction_order)
+        print("contraction order:", contraction_order)
+
+        print("old vertices:", graph.vertices())
+        print("old edge_set:", graph.edge_set())
+        graph = reorder_indices(graph, contraction_order)
+        print("new vertices:", graph.vertices())
+        print("new edge_set:", graph.edge_set())
 
         return graph.to_matrix()
 
@@ -63,3 +69,44 @@ def get_contraction_order(graph, m, nr_iter=10):
         contraction_order.append(node)
 
     return contraction_order
+
+
+def reorder_indices(
+    pyzx_graph,
+    contraction_order,
+):
+
+    start_index = max(contraction_order) + 1
+    node_map = {}
+
+    for v in range(len(contraction_order)):
+        node_map[contraction_order[v]] = start_index + v
+
+    new_graph = pyzx.Graph()
+
+    for v in pyzx_graph.vertices():
+        new_graph.add_vertex_indexed(index=node_map[v])
+        new_graph.set_type(node_map[v], pyzx_graph.type(v))
+        new_graph.set_qubit(node_map[v], pyzx_graph.qubit(v))
+        new_graph.set_row(node_map[v], 1)  # pyzx_graph.row(v))
+        new_graph.set_phase(node_map[v], pyzx_graph.phase(v))
+
+    for edge in pyzx_graph.edge_set():
+        new_graph.add_edge(
+            new_graph.edge(node_map[edge[0]], node_map[edge[1]]),
+            edgetype=pyzx_graph.edge_type(edge),
+        )
+
+    inp = []
+    for i in pyzx_graph.inputs():
+        inp.append(node_map[i])
+    new_graph.set_inputs(inp)
+
+    out = []
+    for o in pyzx_graph.outputs():
+        out.append(node_map[o])
+    new_graph.set_outputs(out)
+
+    new_graph.scalar = pyzx_graph.scalar
+
+    return new_graph
