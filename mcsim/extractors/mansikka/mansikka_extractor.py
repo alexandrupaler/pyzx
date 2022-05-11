@@ -21,19 +21,19 @@ class MansikkaExtractor(BaseExtractor):
         :return: graph matrix
         """
 
-        working_graph = Graph([k for k in graph.vertices()], graph.edge_set())
-        # working_graph = working_graph.construct_dual()
+        working_graph = Graph([k for k in graph.vertices()], graph.edge_set().copy())
+        working_graph = working_graph.construct_dual()
         # print("dual vert:", dual_graph.vertices)
         # print("dual edges: ", dual_graph.edges)
-
 
         contraction_order = get_contraction_order(
             working_graph, self.params["m"], self.params["nr_iter"]
         )
+        print("contraction order: ", contraction_order)
 
-        graph = reorder_indices(graph, contraction_order)
+        #new_graph = reorder_indices(graph, contraction_order)
 
-
+        print("Ok here !!")
         return graph.to_matrix()
 
 
@@ -43,9 +43,9 @@ def get_contraction_order(graph, m, nr_iter=10):
     initial_order = [k for k in graph.vertices]
     contraction_order = []
 
-    initial_tw = find_treewidth_from_order(working_graph, contraction_order)
+    initial_tw = find_treewidth_from_order(working_graph, initial_order)
 
-    if initial_tw:
+    if initial_tw == 1:
         return initial_order
 
     while nr_iter > 0:
