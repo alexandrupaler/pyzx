@@ -105,12 +105,17 @@ def tensorfy(g: 'BaseGraph[VT,ET]', preserve_scalar:bool=True) -> np.ndarray:
     types = g.types()
     depth = g.depth()
     verts_row: Dict[FloatInt, List['VT']] = {}
+
     for v in g.vertices():
         curr_row = rows[v]
         if curr_row in verts_row: verts_row[curr_row].append(v)
         else: verts_row[curr_row] = [v]
 
+    print("### \n verts row :{} \n###".format(verts_row))
+
     inputs = g.inputs()
+    print("### \n inputs_0 :{} \n###".format(inputs))
+
     outputs = g.outputs()
     if not inputs and not outputs:
         if any(g.type(v)==VertexType.BOUNDARY for v in g.vertices()):
@@ -121,19 +126,31 @@ def tensorfy(g: 'BaseGraph[VT,ET]', preserve_scalar:bool=True) -> np.ndarray:
 
     tensor = np.array(1.0,dtype='complex128')
     qubits = len(inputs)
+
     for i in range(qubits): tensor = np.tensordot(tensor,id2,axes=0)
+
     inputs = tuple(sorted(inputs,key=g.qubit))
+    print("### \n inputs_1 :{} \n###".format(inputs))
+
     indices = {}
 
     inputs = sorted(inputs,key=g.qubit)
+    print("### \n inputs_2 :{} \n###".format(inputs))
+
     uncontracted_indices = {}
+
     for i, v in enumerate(inputs):
-        uncontracted_indices[v] = [1 + 2 * i]
+        uncontracted_indices[v] = [1 + 2 * i] # why +2*i
+    print("### \n uncontracted_indices_0 :{} \n###".format(uncontracted_indices))
 
     for i,curr_row in enumerate(sorted(verts_row.keys())):
+        # ->row
         for v in sorted(verts_row[curr_row]):
-            neigh = list(g.neighbors(v))
-            arity = len(neigh)
+            # we took each node from a row
+            neigh = list(g.neighbors(v)) # list of neighbours
+
+            arity = len(neigh) # nr of neighbours
+
             if v in inputs:
                 if types[v] != 0: raise ValueError("Wrong type for input:", v, types[v])
                 continue # inputs already taken care of
@@ -141,7 +158,7 @@ def tensorfy(g: 'BaseGraph[VT,ET]', preserve_scalar:bool=True) -> np.ndarray:
                 #print("output")
                 if arity != 1: raise ValueError("Weird output")
                 if types[v] != 0: raise ValueError("Wrong type for output:",v, types[v])
-                arity += 1
+                arity += 1 # why to increse the number of nr neighbours with 2 ?
                 t = id2
             else:
                 phase = pi*phases[v]
@@ -154,22 +171,34 @@ def tensorfy(g: 'BaseGraph[VT,ET]', preserve_scalar:bool=True) -> np.ndarray:
                 else:
                     raise ValueError("Vertex %s has non-ZXH type but is not an input or output" % str(v))
 
+            # Now I have tensor t for  a certain node v on some row curr row
+
             # type: ignore # TODO: allow ordering on vertex indices?
             past_vertices = list(filter(lambda n: rows[n]<curr_row or (rows[n]==curr_row and n<v), neigh))
+            print ("###\n current_vert={} \n past vertices: {} \n###".format(v,past_vertices))
 
             edge_type = {n:g.edge_type(g.edge(v,n)) for n in past_vertices}
+            print("###\n current_vert={} \n edge_types: {} \n###".format(v, edge_type))
+
             past_vertices.sort(key=lambda n: edge_type[n])
+            print("###\n current_vert={} \n past_vertices_sorted: {} \n###".format(v, edge_type))
+
             for n in past_vertices:
                 if edge_type[n] == EdgeType.HADAMARD:
                     t = np.tensordot(t, had, (0,0)) # Hadamard edges are moved to the last index of t
+            # we multiply t with had if we have had gate in front if a second vertex
 
             # the last indices in idx_contr_past correspond to hadamard contractions
             # These are the indices in the total tensor that will be contracted
+
+            print("\n###\n past vertices : {} \n current vertice:{}\n uncontracted indices:{} \n###".format(past_vertices,v, uncontracted_indices))
             idx_contr_past = pop_and_shift_uncontracted_indices(past_vertices, uncontracted_indices)
+            print(" idx_contr_past 0:{} \n###".format(past_vertices))
+
 
             # The last axes in the tensor t are the one that will be contracted
             idx_contr_curr = list(range(len(t.shape) - len(idx_contr_past), len(t.shape)))
-            print(idx_contr_past, idx_contr_curr)
+            print("indx_contr_past 001:{} \n idx_contr_curr{}".format(idx_contr_past, idx_contr_curr))
 
             tensor = np.tensordot(tensor, t, axes=(idx_contr_past, idx_contr_curr))
 

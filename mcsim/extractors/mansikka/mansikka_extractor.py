@@ -4,7 +4,6 @@
 
 import numpy as np
 import pyzx
-from typing import Dict, List
 
 from .base_extractor import BaseExtractor
 from .graph import Graph
@@ -22,17 +21,36 @@ class MansikkaExtractor(BaseExtractor):
         """
 
         working_graph = Graph([k for k in graph.vertices()], graph.edge_set().copy())
-        working_graph = working_graph.construct_dual()
+        # working_graph = working_graph.construct_dual()
         # print("dual vert:", dual_graph.vertices)
         # print("dual edges: ", dual_graph.edges)
-
+        """
         contraction_order = get_contraction_order(
             working_graph, self.params["m"], self.params["nr_iter"]
         )
         print("contraction order: ", contraction_order)
 
-        #new_graph = reorder_indices(graph, contraction_order)
+        new_graph = reorder_indices(graph, contraction_order)
 
+        pyzx.draw_matplotlib(
+            graph,
+            labels=False,
+            figsize=(8, 2),
+            h_edge_draw="blue",
+            show_scalar=False,
+            rows=None,
+        ).savefig("graph_1.png")
+        pyzx.draw_matplotlib(
+            new_graph,
+            labels=False,
+            figsize=(8, 2),
+            h_edge_draw="blue",
+            show_scalar=False,
+            rows=None,
+        ).savefig("graph_2.png")
+        
+        return new_graph.to_matrix()
+        """
         print("Ok here !!")
         return graph.to_matrix()
 
@@ -84,7 +102,7 @@ def reorder_indices(
         new_graph.add_vertex_indexed(index=node_map[v])
         new_graph.set_type(node_map[v], pyzx_graph.type(v))
         new_graph.set_qubit(node_map[v], pyzx_graph.qubit(v))
-        new_graph.set_row(node_map[v], 1)  # pyzx_graph.row(v))
+        new_graph.set_row(node_map[v], pyzx_graph.row(v))
         new_graph.set_phase(node_map[v], pyzx_graph.phase(v))
 
     for edge in pyzx_graph.edge_set():

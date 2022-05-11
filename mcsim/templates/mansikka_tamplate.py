@@ -123,9 +123,9 @@ print("\n\n ## Mansikka example ##")
 
 
 qubits = 3
-depth = 5
+depth = 7
 circuit = pyzx.generate.CNOT_HAD_PHASE_circuit(qubits, depth, clifford=True)
-
+zx_graph = circuit.to_graph()
 
 example_graph = Graph([k for k in zx_graph.vertices()], zx_graph.edge_set().copy())
 elimination_order = [k for k in zx_graph.vertices()]
@@ -136,6 +136,8 @@ print("treewidth :", tw)
 initial_state = np.zeros((2**qubits,))
 initial_state[0] = 1
 
+# pyzx.draw_matplotlib(example_graph, labels=False, figsize=(8, 2), h_edge_draw='blue', show_scalar=False, rows=None).savefig("graph_0.png")
+
 pipeline = McSimPipeline(name="sim1")
 result0 = pipeline.simulate(initial_state, circuit)
 
@@ -143,13 +145,11 @@ result0 = pipeline.simulate(initial_state, circuit)
 params = {"m": 2, "nr_iter": 6}
 mansikka_extractor = MansikkaExtractor(params=params)
 pipelineMansikka = McSimPipeline(name="basicMansikka", extractor=mansikka_extractor)
-# loaded_circ, loaded_graph = pipelineMansikka.load(circuit)
-# optimized_graph = pipelineMansikka.optimize(loaded_graph)
-matrix = pipelineMansikka.extract(zx_graph)  # optimized_graph)
+loaded_circ, loaded_graph = pipelineMansikka.load(circuit)
+optimized_graph = pipelineMansikka.optimize(loaded_graph)
+matrix = pipelineMansikka.extract( optimized_graph)
 result = pipelineMansikka.evaluate(initial_state, matrix)
-retrieved_circuit = pipelineMansikka.get_circuit(
-    zx_graph, circuit_format=CircFormat.PYZX
-)
+#retrieved_circuit = pipelineMansikka.get_circuit(zx_graph, circuit_format=CircFormat.PYZX)
 
 print("r0:", result0)
 print("r9:", result)
