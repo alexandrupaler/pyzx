@@ -1,4 +1,4 @@
-# PyZX - Python library for quantum circuit rewriting 
+# PyZX - Python library for quantum circuit rewriting
 #        and optimization using the ZX-calculus
 # Copyright (C) 2018 - Aleks Kissinger and John van de Wetering
 
@@ -21,38 +21,53 @@ except:
     import numpy as np
 
 
-class GeneticAlgorithm():
-
-    def __init__(self, population_size, crossover_prob, mutation_prob, fitness_func, maximize=False):
+class GeneticAlgorithm:
+    def __init__(
+        self,
+        population_size,
+        crossover_prob,
+        mutation_prob,
+        fitness_func,
+        maximize=False,
+    ):
         self.population_size = population_size
         self.negative_population_size = int(np.sqrt(population_size))
         self.crossover_prob = crossover_prob
         self.mutation_prob = mutation_prob
         self.fitness_func = fitness_func
-        self._sort = lambda l: l.sort(key=lambda x:x[1], reverse=maximize)
+        self._sort = lambda l: l.sort(key=lambda x: x[1], reverse=maximize)
         self.maximize = maximize
         self.n_qubits = 0
         self.population = None
 
     def _select(self):
-        fitness_scores = [f for c,f in self.population]
+        fitness_scores = [f for c, f in self.population]
         total_fitness = sum(fitness_scores)
         if self.maximize:
-            selection_chance = [f/total_fitness for f in fitness_scores]
+            selection_chance = [f / total_fitness for f in fitness_scores]
         else:
             max_fitness = max(fitness_scores) + 1
             adjusted_scores = [max_fitness - f for f in fitness_scores]
             adjusted_total = sum(adjusted_scores)
-            selection_chance = [ f/adjusted_total for f in adjusted_scores]
-        return np.random.choice(self.population_size, size=2, replace=False, p=selection_chance)
+            selection_chance = [f / adjusted_total for f in adjusted_scores]
+        return np.random.choice(
+            self.population_size, size=2, replace=False, p=selection_chance
+        )
 
     def _create_population(self, n):
-        self.population = [np.random.permutation(n) for _ in range(self.population_size)]
-        self.population = [(chromosome, self.fitness_func(chromosome)) for chromosome in self.population]
+        self.population = [
+            np.random.permutation(n) for _ in range(self.population_size)
+        ]
+        self.population = [
+            (chromosome, self.fitness_func(chromosome))
+            for chromosome in self.population
+        ]
         self._sort(self.population)
-        self.negative_population = self.population[-self.negative_population_size:]
+        self.negative_population = self.population[-self.negative_population_size :]
 
-    def find_optimum(self, n_qubits, n_generations, initial_order=None, n_child=None, continued=False):
+    def find_optimum(
+        self, n_qubits, n_generations, initial_order=None, n_child=None, continued=False
+    ):
         self.n_qubits = n_qubits
         partial_solution = False
         if not continued or self.population is None:
@@ -75,17 +90,28 @@ class GeneticAlgorithm():
 
     def _add_children(self, children):
         n_child = len(children)
-        self.population.extend([(child, self.fitness_func(child)) for child in children])
+        self.population.extend(
+            [(child, self.fitness_func(child)) for child in children]
+        )
         self._sort(self.population)
         self.negative_population.extend(self.population[-n_child:])
-        self.negative_population = [self.negative_population[i] for i in np.random.choice(self.negative_population_size + n_child, size=self.negative_population_size, replace=False)]
-        self.population = self.population[:self.population_size]
+        self.negative_population = [
+            self.negative_population[i]
+            for i in np.random.choice(
+                self.negative_population_size + n_child,
+                size=self.negative_population_size,
+                replace=False,
+            )
+        ]
+        self.population = self.population[: self.population_size]
 
     def _update_population(self, n_child):
         children = []
         # Create a child from weak parents to avoid local optima
         p1, p2 = np.random.choice(self.negative_population_size, size=2, replace=False)
-        child = self._crossover(self.negative_population[p1][0], self.negative_population[p2][0])
+        child = self._crossover(
+            self.negative_population[p1][0], self.negative_population[p2][0]
+        )
         children.append(child)
         for _ in range(n_child):
             if np.random.random() < self.crossover_prob:
@@ -97,16 +123,16 @@ class GeneticAlgorithm():
         self._add_children(children)
 
     def _crossover(self, parent1, parent2):
-        crossover_start = np.random.choice(int(self.n_qubits/2))
-        crossover_length = np.random.choice(self.n_qubits-crossover_start)
+        crossover_start = np.random.choice(int(self.n_qubits / 2))
+        crossover_length = np.random.choice(self.n_qubits - crossover_start)
         crossover_end = crossover_start + crossover_length
-        child = -1*np.ones_like(parent1)
-        child[crossover_start:crossover_end] = parent1[crossover_start: crossover_end]
+        child = -1 * np.ones_like(parent1)
+        child[crossover_start:crossover_end] = parent1[crossover_start:crossover_end]
         child_idx = 0
         for parent_gen in parent2:
-            if child_idx == crossover_start: # skip over the parent1 part in child
+            if child_idx == crossover_start:  # skip over the parent1 part in child
                 child_idx = crossover_end
-            if parent_gen not in child: # only add new genes
+            if parent_gen not in child:  # only add new genes
                 child[child_idx] = parent_gen
                 child_idx += 1
         return child
@@ -119,22 +145,21 @@ class GeneticAlgorithm():
         return parent
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
+
     def fitness_func(chromosome):
         t1 = 1
         t2 = 1
         size = len(chromosome)
-        f1 = [chromosome[i]-i for i in range(size)]
+        f1 = [chromosome[i] - i for i in range(size)]
         f2 = [size - g for g in f1]
         f1.sort()
         f2.sort()
         for i in range(1, size):
-            t1 += int(f1[i] == f1[i-1])
-            t2 += int(f2[i] == f2[i-1])
+            t1 += int(f1[i] == f1[i - 1])
+            t2 += int(f2[i] == f2[i - 1])
         return t1 + t2
-
 
     optimizer = GeneticAlgorithm(1000, 0.8, 0.2, fitness_func)
     optimizer.find_optimum(8, 300)
     print(optimizer.population)
-

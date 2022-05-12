@@ -33,10 +33,12 @@ setup(
         "pyzx.local_search",
         "pyzx.scripts",
     ],
-    python_requires='>=3.6',
-    install_requires=["typing_extensions>=3.7.4",
-                      "numpy>=1.14",
-                      "pyperclip>=1.8.1",
-                      "tqdm>=4.56.0"],
+    python_requires=">=3.6",
+    install_requires=[
+        "typing_extensions>=3.7.4",
+        "numpy>=1.14",
+        "pyperclip>=1.8.1",
+        "tqdm>=4.56.0",
+    ],
     include_package_data=True,
 )

@@ -10,6 +10,8 @@ from .graph import Graph
 from .treewidth_from_order import find_treewidth_from_order
 from .greedy_treewidth_deletion import greedy_treewidth_deletion
 
+from pyzx.mcsim_tensor import mcs_tensorfy
+
 
 class MansikkaExtractor(BaseExtractor):
     def extract(self, graph: pyzx.graph, show_changes=0):
@@ -20,39 +22,21 @@ class MansikkaExtractor(BaseExtractor):
         :return: graph matrix
         """
 
+        print("graph_ edges:", graph.edge_set())
         working_graph = Graph([k for k in graph.vertices()], graph.edge_set().copy())
-        # working_graph = working_graph.construct_dual()
-        # print("dual vert:", dual_graph.vertices)
-        # print("dual edges: ", dual_graph.edges)
-        """
+        working_graph = working_graph.construct_dual()
+        print("dual vert:", working_graph.vertices)
+        print("dual edges: ", working_graph.edges)
+
         contraction_order = get_contraction_order(
             working_graph, self.params["m"], self.params["nr_iter"]
         )
         print("contraction order: ", contraction_order)
 
-        new_graph = reorder_indices(graph, contraction_order)
-
-        pyzx.draw_matplotlib(
-            graph,
-            labels=False,
-            figsize=(8, 2),
-            h_edge_draw="blue",
-            show_scalar=False,
-            rows=None,
-        ).savefig("graph_1.png")
-        pyzx.draw_matplotlib(
-            new_graph,
-            labels=False,
-            figsize=(8, 2),
-            h_edge_draw="blue",
-            show_scalar=False,
-            rows=None,
-        ).savefig("graph_2.png")
-        
-        return new_graph.to_matrix()
-        """
         print("Ok here !!")
-        return graph.to_matrix()
+
+        # return graph.to_matrix()
+        return mcs_tensorfy(contraction_order, graph, preserve_scalar=True)
 
 
 def get_contraction_order(graph, m, nr_iter=10):

@@ -1,4 +1,4 @@
-# PyZX - Python library for quantum circuit rewriting 
+# PyZX - Python library for quantum circuit rewriting
 #        and optimization using the ZX-calculus
 # Copyright (C) 2018 - Aleks Kissinger and John van de Wetering
 
@@ -15,8 +15,9 @@
 # limitations under the License.
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import sys
+
     try:
         from .scripts import main
     except (SystemError, ImportError):

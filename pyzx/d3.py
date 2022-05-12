@@ -1,4 +1,4 @@
-# PyZX - Python library for quantum circuit rewriting 
+# PyZX - Python library for quantum circuit rewriting
 #        and optimization using the ZX-calculus
 # Copyright (C) 2018 - Aleks Kissinger and John van de Wetering
 
@@ -16,6 +16,7 @@
 
 from .drawing import draw_d3
 
-def draw(g,**kwargs):
+
+def draw(g, **kwargs):
     print("This function will be removed. Please use zx.draw or zx.draw_d3 instead.")
-    return draw_d3(g,**kwargs)
+    return draw_d3(g, **kwargs)

@@ -1,4 +1,4 @@
-# PyZX - Python library for quantum circuit rewriting 
+# PyZX - Python library for quantum circuit rewriting
 #        and optimization using the ZX-calculus
 # Copyright (C) 2018 - Aleks Kissinger and John van de Wetering
 
@@ -18,9 +18,10 @@
 import unittest
 import random
 import sys
-if __name__ == '__main__':
-    sys.path.append('..')
-    sys.path.append('.')
+
+if __name__ == "__main__":
+    sys.path.append("..")
+    sys.path.append(".")
 
 try:
     try:
@@ -42,27 +43,28 @@ from pyzx.simplify import supplementarity_simp
 
 SEED = 1337
 
+
 @unittest.skipUnless(np, "numpy needs to be installed for this to run")
 class TestSimplify(unittest.TestCase):
-
     def setUp(self):
         random.seed(SEED)
         self.circuits = []
-        self.circuits.append(cliffordT(3,20,0.3))
-        self.circuits.append(cliffordT(3,10,0.1))
-        self.circuits.append(cliffordT(4,30,0.3))
-        self.circuits.append(cliffordT(5,50,0.08))
-        self.circuits.append(cliffordT(4,80,0.1))
+        self.circuits.append(cliffordT(3, 20, 0.3))
+        self.circuits.append(cliffordT(3, 10, 0.1))
+        self.circuits.append(cliffordT(4, 30, 0.3))
+        self.circuits.append(cliffordT(5, 50, 0.08))
+        self.circuits.append(cliffordT(4, 80, 0.1))
 
     def func_test(self, func, prepare=None):
-        for i,c in enumerate(self.circuits):
+        for i, c in enumerate(self.circuits):
             with self.subTest(i=i, func=func.__name__):
                 if prepare:
-                    for f in prepare: f(c,quiet=True)
+                    for f in prepare:
+                        f(c, quiet=True)
                 t = tensorfy(c)
                 func(c, quiet=True)
                 t2 = tensorfy(c)
-                self.assertTrue(compare_tensors(t,t2))
+                self.assertTrue(compare_tensors(t, t2))
                 del t, t2
 
     def test_spider_simp(self):
@@ -75,37 +77,38 @@ class TestSimplify(unittest.TestCase):
         self.func_test(to_gh)
 
     def test_pivot_simp(self):
-        self.func_test(pivot_simp,prepare=[spider_simp,to_gh,spider_simp])
+        self.func_test(pivot_simp, prepare=[spider_simp, to_gh, spider_simp])
 
     def test_lcomp_simp(self):
-        self.func_test(lcomp_simp,prepare=[spider_simp,to_gh,spider_simp])
+        self.func_test(lcomp_simp, prepare=[spider_simp, to_gh, spider_simp])
 
     def test_clifford_simp(self):
         self.func_test(clifford_simp)
 
     def test_supplementarity_simp(self):
         g = Graph()
-        v = g.add_vertex(1,0,0,phase=Fraction(1,4))
-        w = g.add_vertex(1,1,0,phase=Fraction(7,4))
-        g.add_edge((v,w),2)
+        v = g.add_vertex(1, 0, 0, phase=Fraction(1, 4))
+        w = g.add_vertex(1, 1, 0, phase=Fraction(7, 4))
+        g.add_edge((v, w), 2)
         vs = []
         for i in range(3):
-            h = g.add_vertex(1,i,2,Fraction(1))
+            h = g.add_vertex(1, i, 2, Fraction(1))
             vs.append(h)
-            g.add_edges([(v,h),(w,h)],2)
+            g.add_edges([(v, h), (w, h)], 2)
         t = g.to_tensor()
-        i = supplementarity_simp(g,quiet=True)
-        self.assertEqual(i,1)
-        self.assertTrue(compare_tensors(t,g.to_tensor()))
+        i = supplementarity_simp(g, quiet=True)
+        self.assertEqual(i, 1)
+        self.assertTrue(compare_tensors(t, g.to_tensor()))
 
     def test_teleport_reduce(self):
         """Tests whether teleport_reduce preserves semantics on a set of circuits that have been broken before."""
-        for i,s in enumerate([qasm_1,qasm_2,qasm_3,qasm_4]):
+        for i, s in enumerate([qasm_1, qasm_2, qasm_3, qasm_4]):
             with self.subTest(i=i):
                 c = qasm(s)
                 g = c.to_graph()
                 c2 = Circuit.from_graph(teleport_reduce(g))
                 self.assertTrue(c.verify_equality(c2))
+
 
 qasm_1 = """OPENQASM 2.0;
 include "qelib1.inc";
@@ -160,5 +163,5 @@ cx q[1], q[2];
 """
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

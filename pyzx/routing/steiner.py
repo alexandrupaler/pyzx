@@ -1,4 +1,4 @@
-# PyZX - Python library for quantum circuit rewriting 
+# PyZX - Python library for quantum circuit rewriting
 #        and optimization using the ZX-calculus
 # Copyright (C) 2018 - Aleks Kissinger and John van de Wetering
 
@@ -19,22 +19,27 @@ from . import architecture
 
 debug = False
 
+
 def steiner_gauss(matrix, architecture, full_reduce=False, x=None, y=None):
     """
     Performs Gaussian elimination that is constraint by the given architecture
-    
+
     :param matrix: PyZX Mat2 matrix to be reduced
     :param architecture: The Architecture object to conform to
     :param full_reduce: Whether to fully reduce or only create an upper triangular form
-    :param x: 
-    :param y: 
+    :param x:
+    :param y:
     :return: Rank of the given matrix
     """
+
     def row_add(c0, c1):
         matrix.row_add(c0, c1)
         debug and print("Reducing", c0, c1)
-        if x != None: x.row_add(c0, c1)
-        if y != None: y.col_add(c1, c0)
+        if x != None:
+            x.row_add(c0, c1)
+        if y != None:
+            y.col_add(c1, c0)
+
     def steiner_reduce(col, root, nodes, upper):
         steiner_tree = architecture.steiner_tree(root, nodes, upper)
         # Remove all zeros
@@ -54,7 +59,9 @@ def steiner_gauss(matrix, architecture, full_reduce=False, x=None, y=None):
                     debug and print(matrix[s0, col], matrix[s1, col])
         else:
             debug and print("deal with zero root")
-            if next_check is not None and matrix[next_check[0], col] == 0:  # root is zero
+            if (
+                next_check is not None and matrix[next_check[0], col] == 0
+            ):  # root is zero
                 print("WARNING : Root is 0 => reducing non-pivot column", matrix.data)
             debug and print("Step 1: remove zeros", matrix[:, col])
             while next_check is not None:
@@ -81,21 +88,19 @@ def steiner_gauss(matrix, architecture, full_reduce=False, x=None, y=None):
     for current_row in range(rows):
         found_pivot = False
         while not found_pivot and pivot < cols:
-            nodes = [r for r in range(current_row,rows)
-                       if matrix[r,pivot] == 1]
+            nodes = [r for r in range(current_row, rows) if matrix[r, pivot] == 1]
             if len(nodes) > 0:
                 p_cols.append(pivot)
                 found_pivot = True
             else:
                 pivot += 1
         # no more pivots left
-        if not found_pivot: break
+        if not found_pivot:
+            break
 
-        nodes.insert(0,current_row)
+        nodes.insert(0, current_row)
         steiner_reduce(pivot, current_row, nodes, True)
-        pivot+=1
-
-
+        pivot += 1
 
     # for c in range(cols):
     #     nodes = [r for r in range(pivot, rows) if pivot==r or matrix[r,c] == 1]
@@ -111,7 +116,7 @@ def steiner_gauss(matrix, architecture, full_reduce=False, x=None, y=None):
     if full_reduce:
         for current_row in reversed(range(len(p_cols))):
             pivot = p_cols[current_row]
-            nodes = [r for r in range(0, current_row) if matrix[r,pivot] == 1]
+            nodes = [r for r in range(0, current_row) if matrix[r, pivot] == 1]
             if len(nodes) > 0:
                 nodes.append(current_row)
                 steiner_reduce(pivot, current_row, nodes, False)

@@ -1,4 +1,4 @@
-# PyZX - Python library for quantum circuit rewriting 
+# PyZX - Python library for quantum circuit rewriting
 #        and optimization using the ZX-calculus
 # Copyright (C) 2018 - Aleks Kissinger and John van de Wetering
 
@@ -24,8 +24,8 @@ from pyquil.quilbase import Pragma, Gate
 from pyzx.routing.parity_maps import CNOT_tracker
 from pyzx.circuit import Circuit
 
-class PyQuilCircuit(CNOT_tracker):
 
+class PyQuilCircuit(CNOT_tracker):
     def __init__(self, architecture, **kwargs):
         """
         Class to represent a PyQuil program to run on/be compiled for the given architecture
@@ -35,7 +35,7 @@ class PyQuilCircuit(CNOT_tracker):
         """
 
         super().__init__(**kwargs)
-        self.qc = get_qc('9q-square-qvm')
+        self.qc = get_qc("9q-square-qvm")
         device = architecture.to_quil_device()
         compiler = LocalQVMCompiler(endpoint=self.qc.compiler.endpoint, device=device)
         self.qc.device = device
@@ -50,8 +50,8 @@ class PyQuilCircuit(CNOT_tracker):
     def row_add(self, q0, q1):
         """
         Adds a CNOT gate between the given qubit indices q0 and q1
-        :param q0: 
-        :param q1: 
+        :param q0:
+        :param q1:
         """
         self.program += CNOT(q0, q1)
         super().row_add(q0, q1)
@@ -70,7 +70,9 @@ class PyQuilCircuit(CNOT_tracker):
     def compiled_cnot_count(self):
         if self.compiled_program is None:
             self.compile()
-        return len([g for g in self.compiled_program if isinstance(g, Gate) and g.name == "CZ"])
+        return len(
+            [g for g in self.compiled_program if isinstance(g, Gate) and g.name == "CZ"]
+        )
 
     def to_qasm(self):
         if self.compiled_program is None:
@@ -79,7 +81,9 @@ class PyQuilCircuit(CNOT_tracker):
         comments = []
         for g in self.compiled_program:
             if isinstance(g, Pragma):
-                wiring = " ".join(["//", g.command, "["+g.freeform_string[2:-1]+"]"])
+                wiring = " ".join(
+                    ["//", g.command, "[" + g.freeform_string[2:-1] + "]"]
+                )
                 comments.append(wiring)
             elif isinstance(g, Gate):
                 if g.name == "CZ":
@@ -92,8 +96,7 @@ class PyQuilCircuit(CNOT_tracker):
                     print("Unsupported gate found!", g)
 
         qasm = circuit.to_qasm()
-        return '\n'.join(comments+[qasm])
-
+        return "\n".join(comments + [qasm])
 
     def update_program(self):
         self.program = Program()
@@ -101,11 +104,15 @@ class PyQuilCircuit(CNOT_tracker):
             if hasattr(gate, "name") and gate.name == "CNOT":
                 self.program += CNOT(gate.control, gate.target)
             else:
-                print("Warning: PyquilCircuit can only be used for circuits with only CNOT gates for now.")
+                print(
+                    "Warning: PyquilCircuit can only be used for circuits with only CNOT gates for now."
+                )
 
     @staticmethod
     def from_CNOT_tracker(circuit, architecture):
-        new_circuit = PyQuilCircuit(architecture, n_qubits=circuit.qubits, name=circuit.name)
+        new_circuit = PyQuilCircuit(
+            architecture, n_qubits=circuit.qubits, name=circuit.name
+        )
         new_circuit.gates = circuit.gates
         new_circuit.update_matrix()
         new_circuit.update_program()
@@ -122,7 +129,7 @@ class PyQuilCircuit(CNOT_tracker):
             self.compiled_program = parse_quil(ep.program)
             return ep.program
         except KeyError as e:
-            print('Oops, retrying to compile.', self.retries)
+            print("Oops, retrying to compile.", self.retries)
             if self.retries < self.max_retries:
                 self.retries += 1
                 return self.compile()

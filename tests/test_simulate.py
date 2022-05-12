@@ -1,4 +1,4 @@
-# PyZX - Python library for quantum circuit rewriting 
+# PyZX - Python library for quantum circuit rewriting
 #        and optimization using the ZX-calculus
 # Copyright (C) 2018 - Aleks Kissinger and John van de Wetering
 
@@ -17,9 +17,10 @@
 
 import unittest
 import sys
-if __name__ == '__main__':
-    sys.path.append('..')
-    sys.path.append('.')
+
+if __name__ == "__main__":
+    sys.path.append("..")
+    sys.path.append(".")
 
 try:
     try:
@@ -34,16 +35,17 @@ except ImportError:
 from pyzx.circuit import Circuit
 from pyzx.simulate import replace_magic_states
 
+
 @unittest.skipUnless(np, "numpy needs to be installed for this to run")
 class TestSimulate(unittest.TestCase):
-
     def test_magic_state_decomposition_is_correct(self):
         c = Circuit(6)
         for i in range(6):
-            c.add_gate("T",i)
+            c.add_gate("T", i)
         g = c.to_graph()
         gsum = replace_magic_states(g)
-        self.assertTrue(np.allclose(g.to_tensor(),gsum.to_tensor()))
+        self.assertTrue(np.allclose(g.to_tensor(), gsum.to_tensor()))
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

@@ -1,4 +1,4 @@
-# PyZX - Python library for quantum circuit rewriting 
+# PyZX - Python library for quantum circuit rewriting
 #        and optimization using the ZX-calculus
 # Copyright (C) 2018 - Aleks Kissinger and John van de Wetering
 
@@ -23,96 +23,123 @@ import numpy as np
 from .circuit.gates import CNOT
 
 try:
-    from .linalg_c import do_gauss as gauss_fast # type: ignore
+    from .linalg_c import do_gauss as gauss_fast  # type: ignore
 except ImportError:
-   gauss_fast = None
+    gauss_fast = None
 
-Z2 = Literal[0,1]
+Z2 = Literal[0, 1]
 MatLike = List[List[Z2]]
+
 
 class Mat2(object):
     """A matrix over Z2, with methods for multiplication, primitive row and column
     operations, Gaussian elimination, rank, and epi-mono factorisation."""
-    
+
     @staticmethod
-    def id(n: int) -> 'Mat2':
-        return Mat2([[1 if i == j else 0
-            for j in range(n)] 
-              for i in range(n)])
+    def id(n: int) -> "Mat2":
+        return Mat2([[1 if i == j else 0 for j in range(n)] for i in range(n)])
+
     @staticmethod
-    def zeros(m:int, n: int) -> 'Mat2':
-        return Mat2([[0
-            for j in range(n)] 
-              for i in range(m)])
+    def zeros(m: int, n: int) -> "Mat2":
+        return Mat2([[0 for j in range(n)] for i in range(m)])
+
     @staticmethod
-    def unit_vector(d: int, i: int) -> 'Mat2':
+    def unit_vector(d: int, i: int) -> "Mat2":
         return Mat2([[1 if j == i else 0] for j in range(d)])
 
     def __init__(self, data: MatLike):
         self.data: MatLike = data
-    def __mul__(self, m: 'Mat2') -> 'Mat2':
-        return Mat2([[sum(self.data[i][k] * m.data[k][j] for k in range(len(m.data))) % 2 #type: ignore # mypy doesn't understand literals
-                      for j in range(len(m.data[0]))] for i in range(len(self.data))]) #type: ignore # mypy doesn't understand literals
+
+    def __mul__(self, m: "Mat2") -> "Mat2":
+        return Mat2(
+            [
+                [
+                    sum(self.data[i][k] * m.data[k][j] for k in range(len(m.data))) % 2  # type: ignore # mypy doesn't understand literals
+                    for j in range(len(m.data[0]))
+                ]
+                for i in range(len(self.data))
+            ]
+        )  # type: ignore # mypy doesn't understand literals
+
     def __eq__(self, other: object) -> bool:
-        if not isinstance(other, Mat2): return False
-        if self.rows() != other.rows() or self.cols() != other.cols(): return False
-        return all(self.data[i][j] == other.data[i][j] for i in range(len(self.data)) for j in range(len(self.data[i])))
+        if not isinstance(other, Mat2):
+            return False
+        if self.rows() != other.rows() or self.cols() != other.cols():
+            return False
+        return all(
+            self.data[i][j] == other.data[i][j]
+            for i in range(len(self.data))
+            for j in range(len(self.data[i]))
+        )
+
     def __str__(self) -> str:
-        return "\n".join("[ " + 
-            "  ".join(str(value) for value in row) +
-            " ]" for row in self.data)
+        return "\n".join(
+            "[ " + "  ".join(str(value) for value in row) + " ]" for row in self.data
+        )
+
     def __repr__(self) -> str:
         return str(self)
-    def __getitem__(self, key: Tuple[Union[int,slice],Union[int,slice]]) -> Union['Mat2',Z2]:
+
+    def __getitem__(
+        self, key: Tuple[Union[int, slice], Union[int, slice]]
+    ) -> Union["Mat2", Z2]:
         # For a pair of indices: if either is a slice, return the
         # selected sub-matrix. Otherwise, return the selected element.
-        if isinstance(key,tuple):
-            rs,cs = key
-            if isinstance(rs,slice) or isinstance(cs,slice):
-                if not isinstance(rs,slice): rs = slice(rs,rs+1)
-                if not isinstance(cs,slice): cs = slice(cs,cs+1)
+        if isinstance(key, tuple):
+            rs, cs = key
+            if isinstance(rs, slice) or isinstance(cs, slice):
+                if not isinstance(rs, slice):
+                    rs = slice(rs, rs + 1)
+                if not isinstance(cs, slice):
+                    cs = slice(cs, cs + 1)
                 return Mat2([row[cs] for row in self.data[rs]])
             else:
                 return self.data[rs][cs]
         else:
             raise IndexError("Expected a pair of indices/slices.")
+
     def __setitem__(self, key, val):
         # For a pair of indices: if either is a slice, expect a Mat2
         # and overwrite the selected sub-matrix. Otherwise, expect
         # Z2 and overwrite the selected element.
-        if isinstance(key,tuple):
-            rs,cs = key
+        if isinstance(key, tuple):
+            rs, cs = key
 
-            if isinstance(val,Mat2):
+            if isinstance(val, Mat2):
                 d = val.data
             else:
                 d = [[val]]
 
-            if isinstance(rs,slice):
+            if isinstance(rs, slice):
                 rr = range(*rs.indices(self.rows()))
             else:
-                rr = range(rs,rs+1)
+                rr = range(rs, rs + 1)
 
-            if isinstance(cs,slice):
+            if isinstance(cs, slice):
                 cr = range(*cs.indices(self.cols()))
             else:
-                cr = range(cs,cs+1)
+                cr = range(cs, cs + 1)
 
-            for i,iin in enumerate(rr):
-                for j,jin in enumerate(cr):
+            for i, iin in enumerate(rr):
+                for j, jin in enumerate(cr):
                     self.data[iin][jin] = d[i][j]
         else:
             raise IndexError("Expected a pair of indices/slices.")
-            
 
-    def copy(self) -> 'Mat2':
+    def copy(self) -> "Mat2":
         return Mat2([list(row) for row in self.data])
-    def transpose(self) -> 'Mat2':
-        return Mat2([[self.data[i][j] for i in range(self.rows())] for j in range(self.cols())])
+
+    def transpose(self) -> "Mat2":
+        return Mat2(
+            [[self.data[i][j] for i in range(self.rows())] for j in range(self.cols())]
+        )
+
     def rows(self) -> int:
         return len(self.data)
+
     def cols(self) -> int:
         return len(self.data[0]) if (len(self.data) != 0) else 0
+
     def row_add(self, r0: int, r1: int) -> None:
         """Add r0 to r1"""
         row1 = self.data[r0]
@@ -120,17 +147,20 @@ class Mat2(object):
         for i, v in enumerate(row1):
             if v:
                 row2[i] = 0 if row2[i] else 1
+
     def col_add(self, c0: int, c1: int) -> None:
         """Add r0 to r1"""
         for i in range(self.rows()):
             d = self.data[i]
             if d[c0]:
                 d[c1] = 0 if d[c1] else 1
+
     def row_swap(self, r0: int, r1: int) -> None:
         """Swap the rows r0 and r1"""
         r = self.data[r0]
         self.data[r0] = self.data[r1]
         self.data[r1] = r
+
     def col_swap(self, c0: int, c1: int) -> None:
         """Swap the columns c0 and c1"""
         for r in range(self.rows()):
@@ -138,8 +168,14 @@ class Mat2(object):
             self.data[r][c0] = self.data[r][c1]
             self.data[r][c1] = v
 
-    
-    def gauss(self, full_reduce:bool=False, x:Any=None, y:Any=None, blocksize:int=6, pivot_cols:List[int]=[]) -> int:
+    def gauss(
+        self,
+        full_reduce: bool = False,
+        x: Any = None,
+        y: Any = None,
+        blocksize: int = 6,
+        pivot_cols: List[int] = [],
+    ) -> int:
         """Compute the echelon form. Returns the number of non-zero rows in the result, i.e.
         the rank of the matrix.
 
@@ -169,22 +205,25 @@ class Mat2(object):
 
         rows = self.rows()
         cols = self.cols()
-        #pivot_cols = []
+        # pivot_cols = []
         pivot_row = 0
         for sec in range(math.ceil(cols / blocksize)):
             i0 = sec * blocksize
-            i1 = min(cols, (sec+1) * blocksize)
+            i1 = min(cols, (sec + 1) * blocksize)
 
             # search for duplicate chunks of 'blocksize' bits and eliminate them
-            chunks: Dict[Tuple[Z2,...],int] = dict()
+            chunks: Dict[Tuple[Z2, ...], int] = dict()
             for r in range(pivot_row, rows):
                 t = tuple(self.data[r][i0:i1])
-                if not any(t): continue
+                if not any(t):
+                    continue
                 if t in chunks:
-                    #print('hit (down)', r, chunks[t], t, i0, i1)
+                    # print('hit (down)', r, chunks[t], t, i0, i1)
                     self.row_add(chunks[t], r)
-                    if x is not None: x.row_add(chunks[t], r)
-                    if y is not None: y.col_add(r, chunks[t])
+                    if x is not None:
+                        x.row_add(chunks[t], r)
+                    if y is not None:
+                        y.col_add(r, chunks[t])
                 else:
                     chunks[t] = r
 
@@ -194,21 +233,25 @@ class Mat2(object):
                     if self.data[r0][p] != 0:
                         if r0 != pivot_row:
                             self.row_add(r0, pivot_row)
-                            if x is not None: x.row_add(r0, pivot_row)
-                            if y is not None: y.col_add(pivot_row, r0)
+                            if x is not None:
+                                x.row_add(r0, pivot_row)
+                            if y is not None:
+                                y.col_add(pivot_row, r0)
 
-                        for r1 in range(pivot_row+1, rows):
+                        for r1 in range(pivot_row + 1, rows):
                             # TODO: remove pivot_row != r1 and test
                             if pivot_row != r1 and self.data[r1][p] != 0:
                                 self.row_add(pivot_row, r1)
-                                if x is not None: x.row_add(pivot_row, r1)
-                                if y is not None: y.col_add(r1, pivot_row)
-                        #if full_reduce:
+                                if x is not None:
+                                    x.row_add(pivot_row, r1)
+                                if y is not None:
+                                    y.col_add(r1, pivot_row)
+                        # if full_reduce:
                         pivot_cols.append(p)
                         pivot_row += 1
                         break
                 p += 1
-        
+
         rank = pivot_row
 
         if full_reduce:
@@ -217,18 +260,21 @@ class Mat2(object):
 
             for sec in range(math.ceil(cols / blocksize) - 1, -1, -1):
                 i0 = sec * blocksize
-                i1 = min(cols, (sec+1) * blocksize)
+                i1 = min(cols, (sec + 1) * blocksize)
 
                 # search for duplicate chunks of 'blocksize' bits and eliminate them
                 chunks = dict()
                 for r in range(pivot_row, -1, -1):
                     t = tuple(self.data[r][i0:i1])
-                    if not any(t): continue
+                    if not any(t):
+                        continue
                     if t in chunks:
-                        #print('hit (up)', r, chunks[t], t, i0, i1)
+                        # print('hit (up)', r, chunks[t], t, i0, i1)
                         self.row_add(chunks[t], r)
-                        if x is not None: x.row_add(chunks[t], r)
-                        if y is not None: y.col_add(r, chunks[t])
+                        if x is not None:
+                            x.row_add(chunks[t], r)
+                        if y is not None:
+                            y.col_add(r, chunks[t])
                     else:
                         chunks[t] = r
 
@@ -237,8 +283,10 @@ class Mat2(object):
                     for r in range(0, pivot_row):
                         if self.data[r][pcol] != 0:
                             self.row_add(pivot_row, r)
-                            if x is not None: x.row_add(pivot_row, r)
-                            if y is not None: y.col_add(r, pivot_row)
+                            if x is not None:
+                                x.row_add(pivot_row, r)
+                            if y is not None:
+                                y.col_add(r, pivot_row)
                     pivot_row -= 1
 
         return rank
@@ -248,36 +296,39 @@ class Mat2(object):
         m = self.copy()
         return m.gauss()
 
-    def factor(self) -> Tuple['Mat2','Mat2']:
+    def factor(self) -> Tuple["Mat2", "Mat2"]:
         """Produce a factorisation m = m0 * m1, where
 
         m0.cols() = m1.rows() = m.rank()
         """
-        
+
         # identity matrix
         m0 = Mat2.id(self.rows())
-        
+
         # copy of m (aka self)
         m1 = self.copy()
-        
+
         # produce m1 := g * m and m0 := g^-1. Hence, m0 * m1 = m.
-        rank = m1.gauss(y = m0)
-        
+        rank = m1.gauss(y=m0)
+
         # throw away zero rows in m1, and their corresponding columns in m0
         m0 = Mat2([[row[i] for i in range(rank)] for row in m0.data])
         m1 = Mat2([m1.data[i] for i in range(rank)])
         return (m0, m1)
 
-    def inverse(self) -> Optional['Mat2']:
+    def inverse(self) -> Optional["Mat2"]:
         """Returns the inverse of m is invertible and None otherwise."""
-        if self.rows() != self.cols(): return None
+        if self.rows() != self.cols():
+            return None
         m = self.copy()
         inv = Mat2.id(self.rows())
         rank = m.gauss(x=inv, full_reduce=True)
-        if rank < self.rows(): return None
-        else: return inv
+        if rank < self.rows():
+            return None
+        else:
+            return inv
 
-    def solve(self, b: 'Mat2') -> Optional['Mat2']:
+    def solve(self, b: "Mat2") -> Optional["Mat2"]:
         """Return a vector x such that M * x = b, or None if there is no solution."""
         m = self.copy()
         b1 = b.copy()
@@ -285,10 +336,10 @@ class Mat2(object):
 
         # check for inconsistencies and set x to a
         #  particular solution
-        x = Mat2.zeros(m.cols(),1)
-        for i,row in enumerate(m.data):
+        x = Mat2.zeros(m.cols(), 1)
+        for i, row in enumerate(m.data):
             got_pivot = False
-            for j,v in enumerate(row):
+            for j, v in enumerate(row):
                 if v != 0:
                     got_pivot = True
                     x.data[j][0] = b1.data[i][0]
@@ -309,11 +360,11 @@ class Mat2(object):
         #     x.data = x.data + [[0]]*(m.cols()-x.rows())
         # return x
 
-    def nullspace(self, should_copy:bool=True) -> List[List[Z2]]:
+    def nullspace(self, should_copy: bool = True) -> List[List[Z2]]:
         """Returns a list of non-zero vectors that span the nullspace
         of the matrix. If the matrix has trivial kernel it returns the empty list."""
         if gauss_fast:
-            data = gauss_fast(self.data,1)
+            data = gauss_fast(self.data, 1)
             m = Mat2(data)
         elif should_copy:
             m = self.copy()
@@ -330,16 +381,19 @@ class Mat2(object):
                     nonpivots.remove(j)
                     pivots.append(j)
                     break
-        vectors:List[List[Z2]] = []
+        vectors: List[List[Z2]] = []
         for n in nonpivots:
-            v:List[Z2] = [0]*cols
+            v: List[Z2] = [0] * cols
             v[n] = 1
             for r, p in zip(m.data, pivots):
-                if r[n]: v[p] = 1
+                if r[n]:
+                    v[p] = 1
             vectors.append(v)
         return vectors
 
-    def to_cnots(self, optimize: bool = False, use_log_blocksize: bool = False) -> List[CNOT]:
+    def to_cnots(
+        self, optimize: bool = False, use_log_blocksize: bool = False
+    ) -> List[CNOT]:
         """Returns a list of CNOTs that implements the matrix as a reversible circuit of qubits."""
         cn: Optional[CNOTMaker]
         if not optimize:
@@ -347,24 +401,25 @@ class Mat2(object):
             blocksize = 5
             if use_log_blocksize:
                 blocksize = int(math.log2(self.rows()))
-            self.copy().gauss(full_reduce=True,x=cn, blocksize=blocksize)
+            self.copy().gauss(full_reduce=True, x=cn, blocksize=blocksize)
         else:
             best = 1000000
             best_cn = None
-            for size in range(1,self.rows()):
+            for size in range(1, self.rows()):
                 cn = CNOTMaker()
                 assert cn is not None
-                self.copy().gauss(full_reduce=True,x=cn, blocksize=size)
+                self.copy().gauss(full_reduce=True, x=cn, blocksize=size)
                 if len(cn.cnots) < best:
                     best = len(cn.cnots)
                     best_cn = cn
             cn = best_cn
         assert cn is not None
-        return cn.cnots # list(reversed(cn.cnots)) 
+        return cn.cnots  # list(reversed(cn.cnots))
 
 
 class CNOTMaker(object):
     def __init__(self) -> None:
         self.cnots: List[CNOT] = []
-    def row_add(self, r1:int, r2:int) -> None:
-        self.cnots.append(CNOT(r2,r1))
+
+    def row_add(self, r1: int, r2: int) -> None:
+        self.cnots.append(CNOT(r2, r1))

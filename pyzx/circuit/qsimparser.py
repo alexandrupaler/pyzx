@@ -1,4 +1,4 @@
-# PyZX - Python library for quantum circuit rewriting 
+# PyZX - Python library for quantum circuit rewriting
 #        and optimization using the ZX-calculus
 # Copyright (C) 2018 - Aleks Kissinger and John van de Wetering
 
@@ -20,6 +20,7 @@ from . import Circuit
 from .gates import *
 from fractions import Fraction
 
+
 def parse_qsim(data: str) -> Circuit:
     """Produces a :class:`Circuit` based on a .qsim description of a circuit."""
     lines = data.strip().splitlines()
@@ -27,29 +28,30 @@ def parse_qsim(data: str) -> Circuit:
     try:
         qcount = int(lines.pop(0))
     except ValueError:
-        raise ValueError('First line should be qubit count')
+        raise ValueError("First line should be qubit count")
 
     gates: List[Gate] = []
 
     for l in lines:
         l = l.strip()
-        if l == '': continue
-        gdesc = l.split(' ')
+        if l == "":
+            continue
+        gdesc = l.split(" ")
         q = int(gdesc[2])
-        if gdesc[1] == 'rz':
+        if gdesc[1] == "rz":
             phase = float(gdesc[3]) / math.pi
-            gates.append(ZPhase(target = q, phase = Fraction(phase)))
-        elif gdesc[1] == 'hz_1_2':
-            gates.append(ZPhase(target = q, phase = Fraction(1,4)))
-            gates.append(XPhase(target = q, phase = Fraction(1,2)))
-            gates.append(ZPhase(target = q, phase = Fraction(-1,4)))
-        elif gdesc[1] == 'x_1_2':
-            gates.append(XPhase(target = q, phase = Fraction(1,2)))
-        elif gdesc[1] == 'y_1_2':
-            gates.append(XPhase(target = q, phase = Fraction(1,2)))
-            gates.append(ZPhase(target = q, phase = Fraction(1,2)))
-            gates.append(XPhase(target = q, phase = Fraction(-1,2)))
-        elif gdesc[1] == 'fs':
+            gates.append(ZPhase(target=q, phase=Fraction(phase)))
+        elif gdesc[1] == "hz_1_2":
+            gates.append(ZPhase(target=q, phase=Fraction(1, 4)))
+            gates.append(XPhase(target=q, phase=Fraction(1, 2)))
+            gates.append(ZPhase(target=q, phase=Fraction(-1, 4)))
+        elif gdesc[1] == "x_1_2":
+            gates.append(XPhase(target=q, phase=Fraction(1, 2)))
+        elif gdesc[1] == "y_1_2":
+            gates.append(XPhase(target=q, phase=Fraction(1, 2)))
+            gates.append(ZPhase(target=q, phase=Fraction(1, 2)))
+            gates.append(XPhase(target=q, phase=Fraction(-1, 2)))
+        elif gdesc[1] == "fs":
             q1 = int(gdesc[3])
             theta = float(gdesc[4]) / math.pi
             phi = float(gdesc[5]) / math.pi

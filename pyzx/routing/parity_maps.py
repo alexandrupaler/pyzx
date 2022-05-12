@@ -1,4 +1,4 @@
-# PyZX - Python library for quantum circuit rewriting 
+# PyZX - Python library for quantum circuit rewriting
 #        and optimization using the ZX-calculus
 # Copyright (C) 2018 - Aleks Kissinger and John van de Wetering
 
@@ -16,8 +16,9 @@
 
 
 import sys
-if __name__ == '__main__':
-    sys.path.append('..')
+
+if __name__ == "__main__":
+    sys.path.append("..")
 from pyzx.generate import cnots as generate_cnots
 from pyzx.circuit import Circuit, gates
 from pyzx.linalg import Mat2
@@ -32,7 +33,8 @@ try:
     import cupy as np
 except:
     import numpy as np
-    
+
+
 class CNOT_tracker(Circuit):
     def __init__(self, n_qubits, **kwargs):
         super().__init__(n_qubits, **kwargs)
@@ -62,7 +64,7 @@ class CNOT_tracker(Circuit):
         return metrics
 
     def prepend_gate(self, gate, *args, **kwargs):
-        """Adds a gate to the circuit. ``gate`` can either be 
+        """Adds a gate to the circuit. ``gate`` can either be
         an instance of a :class:`Gate`, or it can be the name of a gate,
         in which case additional arguments should be given.
 
@@ -80,7 +82,7 @@ class CNOT_tracker(Circuit):
         qasm = super().to_qasm()
         initial_perm = "// Initial wiring: " + str(self.row_perm)
         end_perm = "// Resulting wiring: " + str(self.col_perm)
-        return '\n'.join([initial_perm, end_perm, qasm])
+        return "\n".join([initial_perm, end_perm, qasm])
 
     @staticmethod
     def from_circuit(circuit):
@@ -95,12 +97,15 @@ class CNOT_tracker(Circuit):
             if hasattr(gate, "name") and gate.name == "CNOT":
                 self.matrix.row_add(gate.control, gate.target)
             else:
-                print("Warning: CNOT tracker can only be used for circuits with only CNOT gates!")
+                print(
+                    "Warning: CNOT tracker can only be used for circuits with only CNOT gates!"
+                )
 
     @staticmethod
     def from_qasm_file(fname):
         circuit = Circuit.from_qasm_file(fname)
         return CNOT_tracker.from_circuit(circuit)
+
 
 def build_random_parity_map(qubits, n_cnots, circuit=None):
     """
@@ -125,20 +130,46 @@ def build_random_parity_map(qubits, n_cnots, circuit=None):
     return matrix.data
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import argparse
     import os
     from pyzx.scripts.cnot_mapper import make_into_list
 
-    parser = argparse.ArgumentParser(description="Generates random CNOT circuits and stores them as QASM files.")
-    parser.add_argument("folder", help="The QASM file or folder with QASM files to be routed.")
-    parser.add_argument("-q", "--n_qubits", nargs='+', default=9, type=int, help="The number of qubits participating in the circuit.")
-    parser.add_argument("-m", "--n_maps", default=1, type=int, help="The number of circuits to be generated.")
-    parser.add_argument("-d", "--n_cnots", nargs='+', default=None, type=int, help="The number of CNOTs in the generated circuit.")
+    parser = argparse.ArgumentParser(
+        description="Generates random CNOT circuits and stores them as QASM files."
+    )
+    parser.add_argument(
+        "folder", help="The QASM file or folder with QASM files to be routed."
+    )
+    parser.add_argument(
+        "-q",
+        "--n_qubits",
+        nargs="+",
+        default=9,
+        type=int,
+        help="The number of qubits participating in the circuit.",
+    )
+    parser.add_argument(
+        "-m",
+        "--n_maps",
+        default=1,
+        type=int,
+        help="The number of circuits to be generated.",
+    )
+    parser.add_argument(
+        "-d",
+        "--n_cnots",
+        nargs="+",
+        default=None,
+        type=int,
+        help="The number of CNOTs in the generated circuit.",
+    )
 
     args = parser.parse_args()
     if args.n_cnots is None:
-        parser.error(message="Please specify the number of CNOT gates to be generated with the -d flag.")
+        parser.error(
+            message="Please specify the number of CNOT gates to be generated with the -d flag."
+        )
     folder = args.folder
     os.makedirs(folder, exist_ok=True)
 
@@ -157,6 +188,3 @@ if __name__ == '__main__':
                 build_random_parity_map(q, n, circuit)
                 with open(dest_file, "w") as f:
                     f.write(circuit.to_qasm())
-
-
-

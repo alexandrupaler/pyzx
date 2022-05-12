@@ -13,7 +13,7 @@ from mcsim.extractors import MansikkaExtractor
 from mcsim.extractors.mansikka import Graph, find_treewidth_from_order
 from mcsim.extractors.mansikka import greedy_treewidth_deletion
 
-
+"""
 ###################################################
 ## Example from paper ##
 
@@ -47,8 +47,9 @@ print("removing_order:", removing_order)
 
 
 #####################################################
+"""
 
-
+"""
 ######## ###########################################
 ## Extra example ##
 
@@ -86,8 +87,9 @@ print("treewidth:", tw)
 print("removing_order:", removing_order)
 
 #####################################################
+"""
 
-
+"""
 ######## ###########################################
 ## Pyzx example  ##
 
@@ -115,7 +117,7 @@ print("treewidth:", tw)
 print("removing_order:", removing_order)
 
 #####################################################
-
+"""
 
 ######## ###########################################
 ## Pipeline examople  ##
@@ -140,16 +142,16 @@ initial_state[0] = 1
 
 pipeline = McSimPipeline(name="sim1")
 result0 = pipeline.simulate(initial_state, circuit)
-
+print("r0:", result0)
 
 params = {"m": 2, "nr_iter": 6}
 mansikka_extractor = MansikkaExtractor(params=params)
 pipelineMansikka = McSimPipeline(name="basicMansikka", extractor=mansikka_extractor)
 loaded_circ, loaded_graph = pipelineMansikka.load(circuit)
 optimized_graph = pipelineMansikka.optimize(loaded_graph)
-matrix = pipelineMansikka.extract( optimized_graph)
+matrix = pipelineMansikka.extract(optimized_graph)
 result = pipelineMansikka.evaluate(initial_state, matrix)
-#retrieved_circuit = pipelineMansikka.get_circuit(zx_graph, circuit_format=CircFormat.PYZX)
+# retrieved_circuit = pipelineMansikka.get_circuit(zx_graph, circuit_format=CircFormat.PYZX)
 
 print("r0:", result0)
 print("r9:", result)

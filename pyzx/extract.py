@@ -1,4 +1,4 @@
-# PyZX - Python library for quantum circuit rewriting 
+# PyZX - Python library for quantum circuit rewriting
 #        and optimization using the ZX-calculus
 # Copyright (C) 2018 - Aleks Kissinger and John van de Wetering
 
@@ -14,8 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-__all__ = ['extract_circuit', 'extract_simple', 'graph_to_swaps', 'lookahead_extract_base', 'lookahead_full',
-           'lookahead_fast', 'lookahead_extract']
+__all__ = [
+    "extract_circuit",
+    "extract_simple",
+    "graph_to_swaps",
+    "lookahead_extract_base",
+    "lookahead_full",
+    "lookahead_fast",
+    "lookahead_extract",
+]
 
 from fractions import Fraction
 import itertools
@@ -25,92 +32,108 @@ from .linalg import Mat2, Z2
 from .simplify import id_simp, tcount
 from .rules import apply_rule, pivot, match_spider_parallel, spider
 from .circuit import Circuit
-from .circuit.gates import Gate, ParityPhase, CNOT, HAD, ZPhase, XPhase, CZ, CX, SWAP, InitAncilla
+from .circuit.gates import (
+    Gate,
+    ParityPhase,
+    CNOT,
+    HAD,
+    ZPhase,
+    XPhase,
+    CZ,
+    CX,
+    SWAP,
+    InitAncilla,
+)
 
 from .graph.base import BaseGraph, VT, ET
 
 from typing import List, Optional, Tuple, Dict, Set, Union, Iterator
 
 
-def bi_adj(g: BaseGraph[VT,ET], vs:List[VT], ws:List[VT]) -> Mat2:
+def bi_adj(g: BaseGraph[VT, ET], vs: List[VT], ws: List[VT]) -> Mat2:
     """Construct a biadjacency matrix between the supplied list of vertices
     ``vs`` and ``ws``."""
-    return Mat2([[1 if g.connected(v,w) else 0 for v in vs] for w in ws])
+    return Mat2([[1 if g.connected(v, w) else 0 for v in vs] for w in ws])
+
 
 def connectivity_from_biadj(
-        g: BaseGraph[VT,ET], 
-        m: Mat2, 
-        left:List[VT], 
-        right: List[VT], 
-        edgetype:EdgeType.Type=EdgeType.HADAMARD):
+    g: BaseGraph[VT, ET],
+    m: Mat2,
+    left: List[VT],
+    right: List[VT],
+    edgetype: EdgeType.Type = EdgeType.HADAMARD,
+):
     """Replace the connectivity in ``g`` between the vertices in ``left`` and ``right``
     by the biadjacency matrix ``m``. The edges will be of type ``edgetype``."""
     for i in range(len(right)):
         for j in range(len(left)):
-            if m.data[i][j] and not g.connected(right[i],left[j]):
-                g.add_edge(g.edge(right[i],left[j]),edgetype)
-            elif not m.data[i][j] and g.connected(right[i],left[j]):
-                g.remove_edge(g.edge(right[i],left[j]))
+            if m.data[i][j] and not g.connected(right[i], left[j]):
+                g.add_edge(g.edge(right[i], left[j]), edgetype)
+            elif not m.data[i][j] and g.connected(right[i], left[j]):
+                g.remove_edge(g.edge(right[i], left[j]))
+
 
 def streaming_extract(
-        g:BaseGraph[VT,ET], 
-        optimize_czs:bool=True, 
-        optimize_cnots:int=2, 
-        quiet:bool=True
-        ) -> Circuit:
+    g: BaseGraph[VT, ET],
+    optimize_czs: bool = True,
+    optimize_cnots: int = 2,
+    quiet: bool = True,
+) -> Circuit:
     print("This function is deprecated. Call extract_circuit() instead.")
     return extract_circuit(g, optimize_czs, optimize_cnots, quiet)
 
-def permutation_as_swaps(perm:Dict[int,int]) -> List[Tuple[int,int]]:
-    """Returns a series of swaps that realises the given permutation. 
+
+def permutation_as_swaps(perm: Dict[int, int]) -> List[Tuple[int, int]]:
+    """Returns a series of swaps that realises the given permutation.
 
     Args:
         perm: A dictionary where both keys and values take values in 0,1,...,n."""
     swaps = []
     l = [perm[i] for i in range(len(perm))]
-    pinv = {v:k for k,v in perm.items()}
+    pinv = {v: k for k, v in perm.items()}
     linv = [pinv[i] for i in range(len(pinv))]
     for i in range(len(perm)):
-        if l[i] == i: continue
+        if l[i] == i:
+            continue
         t1 = l[i]
         t2 = linv[i]
-        swaps.append((i,t2))
-        #l[i] = i
-        #linv[i] = i
+        swaps.append((i, t2))
+        # l[i] = i
+        # linv[i] = i
         l[t2] = t1
         linv[t1] = t2
     return swaps
 
 
-def column_optimal_swap(m: Mat2) -> Dict[int,int]:
+def column_optimal_swap(m: Mat2) -> Dict[int, int]:
     """Given a matrix m, tries to find a permutation of the columns such that
-    there are as many ones on the diagonal as possible. 
+    there are as many ones on the diagonal as possible.
     This reduces the number of row operations needed to do Gaussian elimination.
     """
     r, c = m.rows(), m.cols()
-    connections:  Dict[int,Set[int]] = {i: set() for i in range(r)}
-    connectionsr: Dict[int,Set[int]] = {j: set() for j in range(c)}
+    connections: Dict[int, Set[int]] = {i: set() for i in range(r)}
+    connectionsr: Dict[int, Set[int]] = {j: set() for j in range(c)}
 
     for i in range(r):
-            for j in range(c):
-                if m.data[i][j]: 
-                    connections[i].add(j)
-                    connectionsr[j].add(i)
+        for j in range(c):
+            if m.data[i][j]:
+                connections[i].add(j)
+                connectionsr[j].add(i)
 
     target = _find_targets(connections, connectionsr)
-    if target is None: target = dict()
-    #target = {v:k for k,v in target.items()}
+    if target is None:
+        target = dict()
+    # target = {v:k for k,v in target.items()}
     left = list(set(range(c)).difference(target.values()))
     right = list(set(range(c)).difference(target.keys()))
     for i in range(len(left)):
         target[right[i]] = left[i]
     return target
 
+
 def _find_targets(
-        conn: Dict[int,Set[int]],
-        connr: Dict[int,Set[int]],
-        target:Dict[int,int]={}
-        ) -> Optional[Dict[int,int]]:
+    conn: Dict[int, Set[int]], connr: Dict[int, Set[int]], target: Dict[int, int] = {}
+) -> Optional[Dict[int, int]]:
     """Helper function for :func:`column_optimal_swap`.
     Recursively makes a choice for a permutation that places additional ones on the diagonal.
     Backtracks when it gets stuck in an unfavorable configuration."""
@@ -125,46 +148,51 @@ def _find_targets(
         min_index = -1
         min_options = set(range(1000))
         for i in range(r):
-            if i in claimedrows: continue
-            s = conn[i] - claimedcols # The free columns
+            if i in claimedrows:
+                continue
+            s = conn[i] - claimedcols  # The free columns
             if len(s) == 1:
                 j = s.pop()
                 target[j] = i
                 claimedcols.add(j)
                 claimedrows.add(i)
                 break
-            if len(s) == 0: return None # contradiction
+            if len(s) == 0:
+                return None  # contradiction
             found_col = False
             for j in s:
                 t = connr[j] - claimedrows
-                if len(t) == 1: # j can only be connected to i
+                if len(t) == 1:  # j can only be connected to i
                     target[j] = i
                     claimedcols.add(j)
                     claimedrows.add(i)
                     found_col = True
                     break
-            if found_col: break
+            if found_col:
+                break
             if len(s) < len(min_options):
                 min_index = i
                 min_options = s
-        else: # Didn't find any forced choices
-            if not (conn.keys() - claimedrows): # we are done
+        else:  # Didn't find any forced choices
+            if not (conn.keys() - claimedrows):  # we are done
                 return target
-            if min_index == -1: raise ValueError("This shouldn't happen ever")
+            if min_index == -1:
+                raise ValueError("This shouldn't happen ever")
             # Start depth-first search
             tgt = target.copy()
-            #print("backtracking on", min_index)
+            # print("backtracking on", min_index)
             for i2 in min_options:
-                #print("trying option", i2)
+                # print("trying option", i2)
                 tgt[i2] = min_index
                 new_target = _find_targets(conn, connr, tgt)
-                if new_target: return new_target
-            #print("Unsuccessful")
+                if new_target:
+                    return new_target
+            # print("Unsuccessful")
             return target
 
 
 def xor_rows(l1: List[Z2], l2: List[Z2]) -> List[Z2]:
-    return [0 if l1[i]==l2[i] else 1 for i in range(len(l1))]
+    return [0 if l1[i] == l2[i] else 1 for i in range(len(l1))]
 
 
 def find_minimal_sums(m: Mat2, reversed_search=False) -> Optional[Tuple[int, ...]]:
@@ -174,17 +202,23 @@ def find_minimal_sums(m: Mat2, reversed_search=False) -> Optional[Tuple[int, ...
     d = m.data
     if any(sum(r) == 1 for r in d):
         return tuple()
-    combs:  Dict[Tuple[int, ...], List[Z2]] = {(i,): d[i] for i in range(r)}
+    combs: Dict[Tuple[int, ...], List[Z2]] = {(i,): d[i] for i in range(r)}
     combs2: Dict[Tuple[int, ...], List[Z2]] = {}
     iterations = 0
     while True:
         combs2 = {}
         for index, l in combs.items():
             max_index: int = max(index)
-            rr: range = range(max_index + 1, r) if not reversed_search else range(r - 1, max_index, -1)
+            rr: range = (
+                range(max_index + 1, r)
+                if not reversed_search
+                else range(r - 1, max_index, -1)
+            )
             for k in rr:
                 # Unrolled xor_rows(combs[index],d[k])
-                row: List[Z2] = [0 if v1 == v2 else 1 for v1, v2 in zip(combs[index], d[k])]
+                row: List[Z2] = [
+                    0 if v1 == v2 else 1 for v1, v2 in zip(combs[index], d[k])
+                ]
                 # row = xor_rows(combs[index],d[k])
                 if sum(row) == 1:
                     return (*index, k)
@@ -200,30 +234,32 @@ def find_minimal_sums(m: Mat2, reversed_search=False) -> Optional[Tuple[int, ...
 
 def greedy_reduction(m: Mat2) -> Optional[List[Tuple[int, int]]]:
     """Returns a list of tuples (r1,r2) that specify which row should be added to which other row
-    in order to reduce one row of m to only contain a single 1. 
+    in order to reduce one row of m to only contain a single 1.
     Used in :func:`extract_circuit` and :func:`lookahead_extract_base`"""
     indicest = find_minimal_sums(m)
-    if indicest is None: return indicest
+    if indicest is None:
+        return indicest
     indices = list(indicest)
-    rows = {i:m.data[i] for i in indices}
-    weights = {i: sum(r) for i,r in rows.items()}
+    rows = {i: m.data[i] for i in indices}
+    weights = {i: sum(r) for i, r in rows.items()}
     result = []
-    while len(indices)>1:
-        best = (-1,-1)
+    while len(indices) > 1:
+        best = (-1, -1)
         reduction = -10000
         for i in indices:
             for j in indices:
-                if j <= i: continue
-                w = sum(xor_rows(rows[i],rows[j]))
+                if j <= i:
+                    continue
+                w = sum(xor_rows(rows[i], rows[j]))
                 if weights[i] - w > reduction:
-                    best = (j,i) # "Add row j to i"
+                    best = (j, i)  # "Add row j to i"
                     reduction = weights[i] - w
                 if weights[j] - w > reduction:
-                    best = (i,j)
+                    best = (i, j)
                     reduction = weights[j] - w
         result.append(best)
         control, target = best
-        rows[target] = xor_rows(rows[control],rows[target])
+        rows[target] = xor_rows(rows[control], rows[target])
         weights[target] = weights[target] - reduction
         indices.remove(control)
     return result
@@ -248,7 +284,8 @@ def flat_indices(m: Mat2, indices: List[int]) -> Tuple[List[Tuple[int, int]], in
         reduction = -10000
         for i in indices:
             for j in indices:
-                if j <= i: continue
+                if j <= i:
+                    continue
                 w = sum(xor_rows(rows[i], rows[j]))
                 if weights[i] - w > reduction:
                     best = (j, i)  # "Add row j to i"
@@ -279,7 +316,8 @@ def greedy_reduction_flat(m: Mat2) -> Optional[List[Tuple[int, int]]]:
     of the number of rows that have to be added together.
     Used in :func:`lookahead_extract_base`"""
     indicest = find_minimal_sums(m, True)
-    if indicest is None: return indicest
+    if indicest is None:
+        return indicest
     return flat_indices(m, list(indicest))[0]
 
 
@@ -288,15 +326,17 @@ def find_2_minimal_sums(m: Mat2) -> Optional[Tuple[Tuple[int, ...], Tuple[int, .
     they only contains a single 1. Used in :func:`greedy_two_reduction`"""
     r = m.rows()
     d = m.data
-    combs:  Dict[Tuple[int, ...], List[Z2]] = {(i,): d[i] for i in range(r)}
+    combs: Dict[Tuple[int, ...], List[Z2]] = {(i,): d[i] for i in range(r)}
     combs2: Dict[Tuple[int, ...], List[Z2]]
     sum1: Optional[Tuple[int, ...]] = None
     iterations = 0
     while True:
         combs2 = {}
         for index, l in combs.items():
-            for k in range(max(index)+1, r):
-                row: List[Z2] = [0 if v1 == v2 else 1 for v1, v2 in zip(combs[index], d[k])]
+            for k in range(max(index) + 1, r):
+                row: List[Z2] = [
+                    0 if v1 == v2 else 1 for v1, v2 in zip(combs[index], d[k])
+                ]
                 if sum(row) == 1:
                     if sum1 is None:
                         sum1 = (*index, k)
@@ -348,19 +388,19 @@ def greedy_two_reduction(m: Mat2) -> Optional[List[Tuple[int, int]]]:
 
 
 # O(N^3)
-def max_overlap(cz_matrix: Mat2) -> Tuple[Tuple[int,int],List[int]]:
+def max_overlap(cz_matrix: Mat2) -> Tuple[Tuple[int, int], List[int]]:
     """Given an adjacency matrix of qubit connectivity of a CZ circuit, returns:
     a) the rows which have the maximum inner product
     b) the list of common qubits between these rows.
-    Used in :func:`extract_circuit` to more optimally place CZ gates. 
+    Used in :func:`extract_circuit` to more optimally place CZ gates.
     """
     N = len(cz_matrix.data[0])
 
     max_inner_product = 0
     final_common_qbs = list()
-    overlapping_rows = (-1,-1)
+    overlapping_rows = (-1, -1)
     for i in range(N):
-        for j in range(i+1,N):
+        for j in range(i + 1, N):
             inner_product = 0
             i_czs = 0
             j_czs = 0
@@ -369,27 +409,29 @@ def max_overlap(cz_matrix: Mat2) -> Tuple[Tuple[int,int],List[int]]:
                 i_czs += cz_matrix.data[i][k]
                 j_czs += cz_matrix.data[j][k]
 
-                if cz_matrix.data[i][k]!=0 and cz_matrix.data[j][k]!=0:
-                    inner_product+=1
+                if cz_matrix.data[i][k] != 0 and cz_matrix.data[j][k] != 0:
+                    inner_product += 1
                     common_qbs.append(k)
 
             if inner_product > max_inner_product:
                 max_inner_product = inner_product
                 if i_czs < j_czs:
-                    overlapping_rows = (j,i)
+                    overlapping_rows = (j, i)
                 else:
-                    overlapping_rows = (i,j)
+                    overlapping_rows = (i, j)
                 final_common_qbs = common_qbs
-    return (overlapping_rows,final_common_qbs)
+    return (overlapping_rows, final_common_qbs)
+
 
 def filter_duplicate_cnots(cnots: List[CNOT]) -> List[CNOT]:
     """Cancels adjacent CNOT gates in a list of CNOT gates."""
     from .optimize import basic_optimization
-    qubits = max([max(cnot.control,cnot.target) for cnot in cnots]) + 1
+
+    qubits = max([max(cnot.control, cnot.target) for cnot in cnots]) + 1
     c = Circuit(qubits)
-    c.gates = cnots.copy() # type: ignore
-    c = basic_optimization(c,do_swaps=False)
-    return c.gates # type: ignore
+    c.gates = cnots.copy()  # type: ignore
+    c = basic_optimization(c, do_swaps=False)
+    return c.gates  # type: ignore
 
 
 def remove_extra_cnots(cnots_to_apply: List[CNOT], mat: Mat2) -> List[CNOT]:
@@ -408,7 +450,9 @@ def remove_extra_cnots(cnots_to_apply: List[CNOT], mat: Mat2) -> List[CNOT]:
     # all the extractable vertices have become extractable
     m2 = mat.copy()
     for count, cnot in enumerate(cnots):
-        if sum(1 for row in m2.data if sum(row) == 1) == len(extractable):  # extractable rows equal to maximum
+        if sum(1 for row in m2.data if sum(row) == 1) == len(
+            extractable
+        ):  # extractable rows equal to maximum
             cnots = cnots[:count]  # So we do not need the remainder of the CNOTs
             break
         m2.row_add(cnot.target, cnot.control)
@@ -422,17 +466,17 @@ def remove_extra_cnots(cnots_to_apply: List[CNOT], mat: Mat2) -> List[CNOT]:
     # without changing extractability.
     necessary_cnots = []
     # 'A' stands for "blocked for All". 'R' for "blocked for Red", 'G' for "blocked for Green".
-    blocked = {i: 'A' for i in extractable}
+    blocked = {i: "A" for i in extractable}
     for cnot in reversed(cnots):
         if cnot.target not in blocked and cnot.control not in blocked:
             continue  # CNOT not needed
         should_add = False
-        if cnot.target in blocked and blocked[cnot.target] != 'R':
+        if cnot.target in blocked and blocked[cnot.target] != "R":
             should_add = True
-            blocked[cnot.target] = 'A'
-        if cnot.control in blocked and blocked[cnot.control] != 'G':
+            blocked[cnot.target] = "A"
+        if cnot.control in blocked and blocked[cnot.control] != "G":
             should_add = True
-            blocked[cnot.control] = 'A'
+            blocked[cnot.control] = "A"
         if cnot.control in extractable:
             should_add = True
         if cnot.target in extractable:
@@ -441,15 +485,22 @@ def remove_extra_cnots(cnots_to_apply: List[CNOT], mat: Mat2) -> List[CNOT]:
             continue
         necessary_cnots.append(cnot)
         if cnot.control not in blocked:
-            blocked[cnot.control] = 'G'  # 'G' stands for Green
+            blocked[cnot.control] = "G"  # 'G' stands for Green
         if cnot.target not in blocked:
-            blocked[cnot.target] = 'R'  # 'R' stands for Red
+            blocked[cnot.target] = "R"  # 'R' stands for Red
 
     return list(reversed(necessary_cnots))
 
 
-def apply_cnots(g: BaseGraph[VT, ET], c: Circuit, frontier: List[VT], qubit_map: Dict[VT, int],
-                cnots: List[CNOT], m: Mat2, neighbors: List[VT]) -> int:
+def apply_cnots(
+    g: BaseGraph[VT, ET],
+    c: Circuit,
+    frontier: List[VT],
+    qubit_map: Dict[VT, int],
+    cnots: List[CNOT],
+    m: Mat2,
+    neighbors: List[VT],
+) -> int:
     """Adds the list of CNOTs to the circuit, modifying the graph, frontier, and qubit map as needed.
     Returns the number of vertices that end up being extracted"""
     if len(cnots) > 0:
@@ -457,7 +508,11 @@ def apply_cnots(g: BaseGraph[VT, ET], c: Circuit, frontier: List[VT], qubit_map:
         cnots = []
         for cnot in cnots2:
             m.row_add(cnot.target, cnot.control)
-            cnots.append(CNOT(qubit_map[frontier[cnot.control]], qubit_map[frontier[cnot.target]]))
+            cnots.append(
+                CNOT(
+                    qubit_map[frontier[cnot.control]], qubit_map[frontier[cnot.target]]
+                )
+            )
         connectivity_from_biadj(g, m, neighbors, frontier)
 
     good_verts = dict()
@@ -488,8 +543,13 @@ def apply_cnots(g: BaseGraph[VT, ET], c: Circuit, frontier: List[VT], qubit_map:
     return len(good_verts)
 
 
-def clean_frontier(g: BaseGraph[VT, ET], c: Circuit, frontier: List[VT],
-                   qubit_map: Dict[VT, int], optimize_czs: bool = True) -> int:
+def clean_frontier(
+    g: BaseGraph[VT, ET],
+    c: Circuit,
+    frontier: List[VT],
+    qubit_map: Dict[VT, int],
+    optimize_czs: bool = True,
+) -> int:
     """Remove single qubit gates from the frontier and any CZs between the vertices in the frontier
     Returns the number of CZs saved if `optimize_czs` is True; otherwise returns 0"""
     phases = g.phases()
@@ -516,7 +576,9 @@ def clean_frontier(g: BaseGraph[VT, ET], c: Circuit, frontier: List[VT],
 
     if optimize_czs:
         overlap_data = max_overlap(cz_mat)
-        while len(overlap_data[1]) > 2:  # there are enough common qubits to be worth optimizing
+        while (
+            len(overlap_data[1]) > 2
+        ):  # there are enough common qubits to be worth optimizing
             i, j = overlap_data[0][0], overlap_data[0][1]
             czs_saved += len(overlap_data[1]) - 2
             c.add_gate("CNOT", i, j)
@@ -570,13 +632,19 @@ def neighbors_of_frontier(g: BaseGraph[VT, ET], frontier: List[VT]) -> Set[VT]:
     return neighbor_set
 
 
-def remove_gadget(g: BaseGraph[VT, ET], frontier: List[VT], qubit_map: Dict[VT, int],
-                  neighbor_set: Set[VT], gadgets: Dict[VT, VT]) -> bool:
+def remove_gadget(
+    g: BaseGraph[VT, ET],
+    frontier: List[VT],
+    qubit_map: Dict[VT, int],
+    neighbor_set: Set[VT],
+    gadgets: Dict[VT, VT],
+) -> bool:
     """Removes a gadget that is attached to a frontier vertex. Returns True if such gadget was found, False otherwise"""
     removed_gadget = False
     outputs = g.outputs()
     for w in neighbor_set:
-        if w not in gadgets: continue
+        if w not in gadgets:
+            continue
         for v in g.neighbors(w):
             if v in frontier:
                 apply_rule(g, pivot, [(w, v, [], [o for o in g.neighbors(v) if o in outputs])])  # type: ignore
@@ -590,13 +658,13 @@ def remove_gadget(g: BaseGraph[VT, ET], frontier: List[VT], qubit_map: Dict[VT, 
 
 
 def extract_circuit(
-        g: BaseGraph[VT, ET],
-        optimize_czs: bool = True,
-        optimize_cnots: int = 2,
-        up_to_perm: bool = False,
-        quiet: bool = True
-        ) -> Circuit:
-    """Given a graph put into semi-normal form by :func:`~pyzx.simplify.full_reduce`, 
+    g: BaseGraph[VT, ET],
+    optimize_czs: bool = True,
+    optimize_cnots: int = 2,
+    up_to_perm: bool = False,
+    quiet: bool = True,
+) -> Circuit:
+    """Given a graph put into semi-normal form by :func:`~pyzx.simplify.full_reduce`,
     it extracts its equivalent set of gates into an instance of :class:`~pyzx.circuit.Circuit`.
     This function implements a more optimized version of the algorithm described in
     `There and back again: A circuit extraction tale <https://arxiv.org/abs/2003.01664>`_
@@ -618,7 +686,7 @@ def extract_circuit(
             n = list(g.neighbors(v))[0]
             gadgets[n] = v
 
-    qubit_map: Dict[VT,int] = dict()
+    qubit_map: Dict[VT, int] = dict()
     frontier = []
     for i, o in enumerate(outputs):
         v = list(g.neighbors(o))[0]
@@ -629,23 +697,23 @@ def extract_circuit(
 
     czs_saved = 0
     q: Union[float, int]
-    
+
     while True:
         # preprocessing
         czs_saved += clean_frontier(g, c, frontier, qubit_map, optimize_czs)
-        
+
         # Now we can proceed with the actual extraction
         # First make sure that frontier is connected in correct way to inputs
         neighbor_set = neighbors_of_frontier(g, frontier)
-        
+
         if not frontier:
             break  # No more vertices to be processed. We are done.
-        
+
         # First we check if there is a phase gadget in the way
         if remove_gadget(g, frontier, qubit_map, neighbor_set, gadgets):
             # There was a gadget in the way. Go back to the top
             continue
-            
+
         neighbors = list(neighbor_set)
         m = bi_adj(g, neighbors, frontier)
         if all(sum(row) != 1 for row in m.data):  # No easy vertex
@@ -655,7 +723,9 @@ def extract_circuit(
                 greedy_operations = None
 
             if greedy_operations is not None:
-                greedy = [CNOT(target, control) for control, target in greedy_operations]
+                greedy = [
+                    CNOT(target, control) for control, target in greedy_operations
+                ]
                 if (len(greedy) == 1 or optimize_cnots < 3) and not quiet:
                     print("Found greedy reduction with", len(greedy), "CNOT")
                 cnots = greedy
@@ -675,25 +745,30 @@ def extract_circuit(
                 if greedy_operations is not None:
                     m3 = m2.copy()
                     for cnot in cnots:
-                        m3.row_add(cnot.target,cnot.control)
+                        m3.row_add(cnot.target, cnot.control)
                     reductions = sum(1 for row in m3.data if sum(row) == 1)
-                    if greedy and (len(cnots)/reductions > len(greedy)-0.1):
-                        if not quiet: print("Found greedy reduction with", len(greedy), "CNOTs")
+                    if greedy and (len(cnots) / reductions > len(greedy) - 0.1):
+                        if not quiet:
+                            print("Found greedy reduction with", len(greedy), "CNOTs")
                         cnots = greedy
                     else:
                         neighbors = neighbors2
                         m = m2
-                        if not quiet: print("Gaussian elimination with", len(cnots), "CNOTs")
+                        if not quiet:
+                            print("Gaussian elimination with", len(cnots), "CNOTs")
             # We now have a set of CNOTs that suffice to extract at least one vertex.
         else:
-            if not quiet: print("Simple vertex")
+            if not quiet:
+                print("Simple vertex")
             cnots = []
 
         extracted = apply_cnots(g, c, frontier, qubit_map, cnots, m, neighbors)
-        if not quiet: print("Vertices extracted:", extracted)
-            
+        if not quiet:
+            print("Vertices extracted:", extracted)
+
     if optimize_czs:
-        if not quiet: print("CZ gates saved:", czs_saved)
+        if not quiet:
+            print("CZ gates saved:", czs_saved)
     # Outside of loop. Finish up the permutation
     id_simp(g, quiet=True)  # Now the graph should only contain inputs and outputs
     # Since we were extracting from right to left, we reverse the order of the gates
@@ -715,57 +790,69 @@ def extract_simple(g: BaseGraph[VT, ET], up_to_perm: bool = True) -> Circuit:
     outputs = g.outputs()
     while progress:
         progress = False
-        
+
         for q, o in enumerate(outputs):
             if g.vertex_degree(o) != 1:
                 raise ValueError("Bad output degree")
             v = list(g.neighbors(o))[0]
             e = g.edge(o, v)
-            
+
             if g.edge_type(e) == EdgeType.HADAMARD:
                 progress = True
                 circ.prepend_gate(HAD(q))
                 g.set_edge_type(e, EdgeType.SIMPLE)
-            elif (g.type(v) == VertexType.Z or g.type(v) == VertexType.X) and g.vertex_degree(v) == 2:
+            elif (
+                g.type(v) == VertexType.Z or g.type(v) == VertexType.X
+            ) and g.vertex_degree(v) == 2:
                 ns = list(g.neighbors(v))
                 w = ns[0] if ns[1] == o else ns[1]
                 progress = True
 
                 if g.phase(v) != 0:
-                    gate = (ZPhase(q, g.phase(v)) if g.type(v) == VertexType.Z else
-                            XPhase(q, g.phase(v)))
+                    gate = (
+                        ZPhase(q, g.phase(v))
+                        if g.type(v) == VertexType.Z
+                        else XPhase(q, g.phase(v))
+                    )
                     circ.prepend_gate(gate)
 
-                g.add_edge(g.edge(w,o), edgetype=g.edge_type(g.edge(w,v)))
+                g.add_edge(g.edge(w, o), edgetype=g.edge_type(g.edge(w, v)))
                 g.remove_vertex(v)
-                
-        if progress: continue
-        
-        for q1,o1 in enumerate(outputs):
-            for q2,o2 in enumerate(outputs):
-                if o1 == o2: continue
+
+        if progress:
+            continue
+
+        for q1, o1 in enumerate(outputs):
+            for q2, o2 in enumerate(outputs):
+                if o1 == o2:
+                    continue
                 v1 = list(g.neighbors(o1))[0]
                 v2 = list(g.neighbors(o2))[0]
-                if g.connected(v1,v2):
-                    if ((g.type(v1) == g.type(v2) and g.edge_type(g.edge(v1,v2)) == EdgeType.SIMPLE) or
-                        (g.type(v1) != g.type(v2) and g.edge_type(g.edge(v1,v2)) == EdgeType.HADAMARD)):
+                if g.connected(v1, v2):
+                    if (
+                        g.type(v1) == g.type(v2)
+                        and g.edge_type(g.edge(v1, v2)) == EdgeType.SIMPLE
+                    ) or (
+                        g.type(v1) != g.type(v2)
+                        and g.edge_type(g.edge(v1, v2)) == EdgeType.HADAMARD
+                    ):
                         raise ValueError("ZX diagram is not unitary")
-                    
+
                     if g.type(v1) == VertexType.Z and g.type(v2) == VertexType.X:
                         # CNOT
                         progress = True
-                        circ.prepend_gate(CNOT(control=q1,target=q2))
-                        g.remove_edge(g.edge(v1,v2))
+                        circ.prepend_gate(CNOT(control=q1, target=q2))
+                        g.remove_edge(g.edge(v1, v2))
                     elif g.type(v1) == VertexType.Z and g.type(v2) == VertexType.Z:
                         # CZ
                         progress = True
-                        circ.prepend_gate(CZ(control=q1,target=q2))
-                        g.remove_edge(g.edge(v1,v2))
+                        circ.prepend_gate(CZ(control=q1, target=q2))
+                        g.remove_edge(g.edge(v1, v2))
                     elif g.type(v1) == VertexType.X and g.type(v2) == VertexType.X:
                         # conjugate CZ
                         progress = True
-                        circ.prepend_gate(CX(control=q1,target=q2))
-                        g.remove_edge(g.edge(v1,v2))
+                        circ.prepend_gate(CX(control=q1, target=q2))
+                        g.remove_edge(g.edge(v1, v2))
 
     return graph_to_swaps(g, up_to_perm) + circ
 
@@ -778,16 +865,19 @@ def graph_to_swaps(g: BaseGraph[VT, ET], no_swaps: bool = False) -> Circuit:
     leftover_swaps = False
     inputs = g.inputs()
     outputs = g.outputs()
-    for q,v in enumerate(outputs): # check for a last layer of Hadamards, and see if swap gates need to be applied.
+    for q, v in enumerate(
+        outputs
+    ):  # check for a last layer of Hadamards, and see if swap gates need to be applied.
         inp = list(g.neighbors(v))[0]
-        if inp not in inputs: 
+        if inp not in inputs:
             raise TypeError("Algorithm failed: Graph is not fully reduced")
             return c
-        if g.edge_type(g.edge(v,inp)) == EdgeType.HADAMARD:
+        if g.edge_type(g.edge(v, inp)) == EdgeType.HADAMARD:
             c.prepend_gate(HAD(q))
-            g.set_edge_type(g.edge(v,inp),EdgeType.SIMPLE)
+            g.set_edge_type(g.edge(v, inp), EdgeType.SIMPLE)
         q2 = inputs.index(inp)
-        if q2 != q: leftover_swaps = True
+        if q2 != q:
+            leftover_swaps = True
         swap_map[q] = q2
     if not no_swaps and leftover_swaps:
         for t1, t2 in permutation_as_swaps(swap_map):
@@ -810,21 +900,23 @@ class LookaheadNode:
     root.expand -> root.get_finished -> root.next_nodes, as used in lookahead_extract_base
     """
 
-    def __init__(self,
-                 g: BaseGraph[VT, ET],
-                 c: Circuit,
-                 frontier: List[VT],
-                 qubit_map: Dict[VT, int],
-                 gadgets: Dict[VT, VT],
-                 opt_depth: bool,
-                 hard_limit: int,
-                 ext_count: int = 0):
+    def __init__(
+        self,
+        g: BaseGraph[VT, ET],
+        c: Circuit,
+        frontier: List[VT],
+        qubit_map: Dict[VT, int],
+        gadgets: Dict[VT, VT],
+        opt_depth: bool,
+        hard_limit: int,
+        ext_count: int = 0,
+    ):
         self.g: BaseGraph[VT, ET] = g
         self.c: Circuit = c
         self.frontier: List[VT] = frontier
         self.qubit_map: Dict[VT, int] = qubit_map
         self.gadgets: Dict[VT, VT] = gadgets
-        self.children: List['LookaheadNode'] = []
+        self.children: List["LookaheadNode"] = []
         self.expanded: bool = False
         self.ext_count: int = ext_count
         self.collected: bool = False
@@ -868,7 +960,7 @@ class LookaheadNode:
             leaves += c_l
         return nodes, leaves, depth + 1
 
-    def optimal(self, rp: 'RootPicker', d: int = -1):
+    def optimal(self, rp: "RootPicker", d: int = -1):
         """
         Computes the stats for leaves (number of 2 qubit gates or depth) to determine the best nodes.
 
@@ -898,7 +990,13 @@ class LookaheadNode:
         for child in self.children:
             child.optimal(rp, d)
 
-    def next_nodes(self, min_extracted: int, rp: 'RootPicker', prev_circ: Optional[Circuit] = None, d: int = -1):
+    def next_nodes(
+        self,
+        min_extracted: int,
+        rp: "RootPicker",
+        prev_circ: Optional[Circuit] = None,
+        d: int = -1,
+    ):
         """
         Used to find the next roots. Looks for nodes that fit the parameters, then searches their leaves.
 
@@ -940,8 +1038,9 @@ class LookaheadNode:
                 self.finished_children.append(i)
         return self.finished_children is not None
 
-    def __collect_finished_cnot(self, best_c: Optional[Circuit], best_d: int,
-                                c: Circuit, up_to_perm: bool) -> Tuple[Optional[Circuit], int]:
+    def __collect_finished_cnot(
+        self, best_c: Optional[Circuit], best_d: int, c: Circuit, up_to_perm: bool
+    ) -> Tuple[Optional[Circuit], int]:
         """
         Find the best fully extracted circuits in the CNOT optimisation case
         """
@@ -957,15 +1056,20 @@ class LookaheadNode:
                 best_d = d
         else:
             if self.finished_children is None:
-                raise AssertionError("LookaheadNode.__collect_finished_cnot was called before " +
-                                     "LookaheadNode.__has_finished")
+                raise AssertionError(
+                    "LookaheadNode.__collect_finished_cnot was called before "
+                    + "LookaheadNode.__has_finished"
+                )
             for i in self.finished_children:
-                best_c, best_d = self.children[i].__collect_finished_cnot(best_c, best_d, c, up_to_perm)
+                best_c, best_d = self.children[i].__collect_finished_cnot(
+                    best_c, best_d, c, up_to_perm
+                )
             self.finished_children = None
         return best_c, best_d
 
-    def __collect_finished_depth(self, best_c: Optional[Circuit], best_d: int,
-                                 up_to_perm: bool) -> Tuple[Optional[Circuit], int]:
+    def __collect_finished_depth(
+        self, best_c: Optional[Circuit], best_d: int, up_to_perm: bool
+    ) -> Tuple[Optional[Circuit], int]:
         """
         Find the best fully extracted circuits in the depth optimisation case
         """
@@ -980,10 +1084,14 @@ class LookaheadNode:
                 best_d = d
         elif self.children is not None:
             for child in self.children:
-                best_c, best_d = child.__collect_finished_depth(best_c, best_d, up_to_perm)
+                best_c, best_d = child.__collect_finished_depth(
+                    best_c, best_d, up_to_perm
+                )
         return best_c, best_d
 
-    def get_finished(self, best_c: Optional[Circuit], best_d: int, up_to_perm: bool) -> Tuple[Optional[Circuit], int]:
+    def get_finished(
+        self, best_c: Optional[Circuit], best_d: int, up_to_perm: bool
+    ) -> Tuple[Optional[Circuit], int]:
         """
         Find the best fully extracted circuits in the CNOT optimisation case
 
@@ -998,7 +1106,9 @@ class LookaheadNode:
         if self.opt_depth:
             return self.__collect_finished_depth(best_c, best_d, up_to_perm)
         if self.__has_finished():
-            return self.__collect_finished_cnot(best_c, best_d, Circuit(self.c.qubits), up_to_perm)
+            return self.__collect_finished_cnot(
+                best_c, best_d, Circuit(self.c.qubits), up_to_perm
+            )
         return best_c, best_d
 
     def can_expand(self):
@@ -1015,15 +1125,24 @@ class LookaheadNode:
                 return True
         return False
 
-    def branch_child(self) -> 'LookaheadNode':
-        child = LookaheadNode(self.g.clone(), self.c.copy() if self.opt_depth else Circuit(self.c.qubits),
-                              self.frontier.copy(), self.qubit_map.copy(), self.gadgets.copy(), self.opt_depth,
-                              self.hard_limit, self.ext_count)
+    def branch_child(self) -> "LookaheadNode":
+        child = LookaheadNode(
+            self.g.clone(),
+            self.c.copy() if self.opt_depth else Circuit(self.c.qubits),
+            self.frontier.copy(),
+            self.qubit_map.copy(),
+            self.gadgets.copy(),
+            self.opt_depth,
+            self.hard_limit,
+            self.ext_count,
+        )
         self.children.append(child)
         return child
 
     def apply_cnots(self, cnots: List[CNOT], m: Mat2, neighbors: List[VT]):
-        self.ext_count += apply_cnots(self.g, self.c, self.frontier, self.qubit_map, cnots, m, neighbors)
+        self.ext_count += apply_cnots(
+            self.g, self.c, self.frontier, self.qubit_map, cnots, m, neighbors
+        )
 
     def expand(self, limit: int, max_depth: int, algorithms: List[int]):
         if max_depth == 0:
@@ -1042,7 +1161,9 @@ class LookaheadNode:
                 break  # No more vertices to be processed. We are done.
 
             # First we check if there is a phase gadget in the way
-            if remove_gadget(self.g, self.frontier, self.qubit_map, neighbor_set, self.gadgets):
+            if remove_gadget(
+                self.g, self.frontier, self.qubit_map, neighbor_set, self.gadgets
+            ):
                 # There was a gadget in the way. Go back to the top
                 continue
 
@@ -1061,7 +1182,9 @@ class LookaheadNode:
                         continue
                     should_append = True
                     for i in range(len(branches)):
-                        if compare_cnots(cnots_opt, branches[i], qubits):  # Same result when applying CNOTs
+                        if compare_cnots(
+                            cnots_opt, branches[i], qubits
+                        ):  # Same result when applying CNOTs
                             should_append = False
                             if len(cnots_opt) < len(branches[i]):
                                 branches[i] = cnots_opt
@@ -1085,7 +1208,9 @@ class LookaheadNode:
         for child in self.children:
             child.expand(limit, max_depth - 1, algorithms)
 
-    def apply_operation(self, operation_id: int, m: Mat2, neighbors: List[VT]) -> Optional[List[CNOT]]:
+    def apply_operation(
+        self, operation_id: int, m: Mat2, neighbors: List[VT]
+    ) -> Optional[List[CNOT]]:
         """
         Apply one of the possible operations to the current node to obtain a list of CNOTs
         """
@@ -1098,7 +1223,8 @@ class LookaheadNode:
             m2 = bi_adj(self.g, neighbors2, self.frontier)
             cnots = m2.to_cnots(optimize=False, use_log_blocksize=True)
             cnots = filter_duplicate_cnots(
-                cnots)  # Since the matrix is not square, the algorithm sometimes introduces duplicates
+                cnots
+            )  # Since the matrix is not square, the algorithm sometimes introduces duplicates
 
         elif operation_id == 1:
             greedy_operations = greedy_reduction(m)
@@ -1129,6 +1255,7 @@ class RootPicker:
     """
     Class for picking the next roots that correspond to the best k leaves.
     """
+
     def __init__(self, k: int):
         self.k: int = k
         self.nodes: List[Optional[Tuple[LookaheadNode, Optional[Circuit], int]]] = []
@@ -1199,17 +1326,17 @@ class RootPicker:
 
 
 def lookahead_extract_base(
-        g: BaseGraph[VT, ET],
-        steps: int = -1,  # ideal number of steps to look ahead
-        depth_limit: int = 7,  # maximum depth os the lookahead tree
-        min_extract: int = 5,  # minimum extracted vertices at each step, improves performance
-        nodes_kept: int = 4,   # keep the best 'nodes_kept' nodes when advancing to the next step
-        hard_limit: int = -1,  # do not consider circuits where the comparison metric is over this
-        algorithms: Optional[List[int]] = None,  # always include 0, pick any from 1, 2, 3
-        optimize_for_depth: bool = False,  # optimize for depth instead of two qubit gates
-        compare_basic: bool = True,  # use the default extractions and pick the best
-        up_to_perm: bool = False  # return an equivalent circuit up to an input permutation
-        ) -> Optional[Circuit]:
+    g: BaseGraph[VT, ET],
+    steps: int = -1,  # ideal number of steps to look ahead
+    depth_limit: int = 7,  # maximum depth os the lookahead tree
+    min_extract: int = 5,  # minimum extracted vertices at each step, improves performance
+    nodes_kept: int = 4,  # keep the best 'nodes_kept' nodes when advancing to the next step
+    hard_limit: int = -1,  # do not consider circuits where the comparison metric is over this
+    algorithms: Optional[List[int]] = None,  # always include 0, pick any from 1, 2, 3
+    optimize_for_depth: bool = False,  # optimize for depth instead of two qubit gates
+    compare_basic: bool = True,  # use the default extractions and pick the best
+    up_to_perm: bool = False,  # return an equivalent circuit up to an input permutation
+) -> Optional[Circuit]:
     """
     Main method for the lookahead extraction. Uses different methods to produce CNOTS and extract vertices,
     simulates a few steps in advance, and picks the best results.
@@ -1277,8 +1404,17 @@ def lookahead_extract_base(
         frontier.append(v)
         qubit_map[v] = i
 
-    roots: List[Optional[LookaheadNode]] =\
-        [LookaheadNode(g, Circuit(g.qubit_count()), frontier, qubit_map, gadgets, optimize_for_depth, hard_limit)]
+    roots: List[Optional[LookaheadNode]] = [
+        LookaheadNode(
+            g,
+            Circuit(g.qubit_count()),
+            frontier,
+            qubit_map,
+            gadgets,
+            optimize_for_depth,
+            hard_limit,
+        )
+    ]
 
     while len(roots) > 0:
         rp = RootPicker(nodes_kept)
@@ -1304,8 +1440,10 @@ def lookahead_extract_base(
     return best_c
 
 
-def get_optimize_value(c: Circuit, optimize_for_depth: bool, expand_to_basic: bool = False) -> int:
-    """ Computes the two qubit count or the depth for the circuit. """
+def get_optimize_value(
+    c: Circuit, optimize_for_depth: bool, expand_to_basic: bool = False
+) -> int:
+    """Computes the two qubit count or the depth for the circuit."""
     if expand_to_basic:
         c = c.to_basic_gates()
     if not optimize_for_depth:
@@ -1329,7 +1467,7 @@ def cnots_to_xor_list(cnots: List[CNOT], size: int) -> List[Set[int]]:
 
 
 def compare_cnots(c1: List[CNOT], c2: List[CNOT], size: int) -> bool:
-    """ Checks if two sets of cnots give the same results """
+    """Checks if two sets of cnots give the same results"""
     s1 = cnots_to_xor_list(c1, size)
     s2 = cnots_to_xor_list(c2, size)
     for index in range(size):
@@ -1338,26 +1476,45 @@ def compare_cnots(c1: List[CNOT], c2: List[CNOT], size: int) -> bool:
     return True
 
 
-def lookahead_fast(g: BaseGraph[VT, ET], optimize_for_depth: bool = False, up_to_perm: bool = False) -> Circuit:
+def lookahead_fast(
+    g: BaseGraph[VT, ET], optimize_for_depth: bool = False, up_to_perm: bool = False
+) -> Circuit:
     """
     A lookahead extraction with relatively fast results. For details see :func:`lookahead_extract_base`
     """
-    c = lookahead_extract_base(g, 4 * g.qubit_count(), 8, 5, 4, -1, [0, 1], optimize_for_depth, False, up_to_perm)
+    c = lookahead_extract_base(
+        g,
+        4 * g.qubit_count(),
+        8,
+        5,
+        4,
+        -1,
+        [0, 1],
+        optimize_for_depth,
+        False,
+        up_to_perm,
+    )
     if c is None:
         raise AssertionError("Lookahead extraction with no hard limit returned None")
     return c
 
 
-def lookahead_extract(g: BaseGraph[VT, ET], optimize_for_depth: bool = False, up_to_perm: bool = False) -> Circuit:
+def lookahead_extract(
+    g: BaseGraph[VT, ET], optimize_for_depth: bool = False, up_to_perm: bool = False
+) -> Circuit:
     """
-        A lookahead extraction with recommended parameters. For details see :func:`lookahead_extract_base`
+    A lookahead extraction with recommended parameters. For details see :func:`lookahead_extract_base`
     """
     qubits = g.qubit_count()
-    c = lookahead_extract_base(g.clone(), 4 * qubits, 8, 0, 4, -1, [0, 1], optimize_for_depth, True, up_to_perm)
+    c = lookahead_extract_base(
+        g.clone(), 4 * qubits, 8, 0, 4, -1, [0, 1], optimize_for_depth, True, up_to_perm
+    )
     if c is None:
         raise AssertionError("Lookahead extraction with no hard limit returned None")
     d = get_optimize_value(c, optimize_for_depth, True)
-    c1 = lookahead_extract_base(g, 4 * qubits, 8, 5, 4, d, [0, 3], optimize_for_depth, False, up_to_perm)
+    c1 = lookahead_extract_base(
+        g, 4 * qubits, 8, 5, 4, d, [0, 3], optimize_for_depth, False, up_to_perm
+    )
     if c1 is not None:
         d1 = get_optimize_value(c1, optimize_for_depth, True)
         if d1 < d:
@@ -1365,30 +1522,48 @@ def lookahead_extract(g: BaseGraph[VT, ET], optimize_for_depth: bool = False, up
     return c
 
 
-def lookahead_full(g: BaseGraph[VT, ET], optimize_for_depth: bool = False, up_to_perm: bool = False) -> Circuit:
+def lookahead_full(
+    g: BaseGraph[VT, ET], optimize_for_depth: bool = False, up_to_perm: bool = False
+) -> Circuit:
     """
-        A lookahead extraction which compares a number of possible extractions and returns the best result.
-        Can take a very long time for large circuits. For details see :func:`lookahead_extract_base`
+    A lookahead extraction which compares a number of possible extractions and returns the best result.
+    Can take a very long time for large circuits. For details see :func:`lookahead_extract_base`
     """
     qubits = g.qubit_count()
-    c = lookahead_extract_base(g.clone(), 3 * qubits, 7, qubits, 4, -1,
-                               [0, 1, 3], optimize_for_depth, True, up_to_perm)
+    c = lookahead_extract_base(
+        g.clone(),
+        3 * qubits,
+        7,
+        qubits,
+        4,
+        -1,
+        [0, 1, 3],
+        optimize_for_depth,
+        True,
+        up_to_perm,
+    )
     if c is None:
         raise AssertionError("Lookahead extraction with no hard limit returned None")
     d = get_optimize_value(c, optimize_for_depth, True)
-    c1 = lookahead_extract_base(g.clone(), 4 * qubits, 8, 0, 4, d, [0, 1], optimize_for_depth, False, up_to_perm)
+    c1 = lookahead_extract_base(
+        g.clone(), 4 * qubits, 8, 0, 4, d, [0, 1], optimize_for_depth, False, up_to_perm
+    )
     if c1 is not None:
         d1 = get_optimize_value(c1, optimize_for_depth, True)
         if d1 < d:
             c = c1
             d = d1
-    c1 = lookahead_extract_base(g.clone(), 4 * qubits, 8, 5, 4, d, [0, 2], optimize_for_depth, False, up_to_perm)
+    c1 = lookahead_extract_base(
+        g.clone(), 4 * qubits, 8, 5, 4, d, [0, 2], optimize_for_depth, False, up_to_perm
+    )
     if c1 is not None:
         d1 = get_optimize_value(c1, optimize_for_depth, True)
         if d1 < d:
             c = c1
             d = d1
-    c1 = lookahead_extract_base(g, 4 * qubits, 8, 5, 4, d, [0, 3], optimize_for_depth, False, up_to_perm)
+    c1 = lookahead_extract_base(
+        g, 4 * qubits, 8, 5, 4, d, [0, 3], optimize_for_depth, False, up_to_perm
+    )
     if c1 is not None:
         d1 = get_optimize_value(c1, optimize_for_depth, True)
         if d1 < d:

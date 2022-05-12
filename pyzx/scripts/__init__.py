@@ -1,4 +1,4 @@
-# PyZX - Python library for quantum circuit rewriting 
+# PyZX - Python library for quantum circuit rewriting
 #        and optimization using the ZX-calculus
 # Copyright (C) 2018 - Aleks Kissinger and John van de Wetering
 
@@ -30,23 +30,25 @@ import argparse
 from . import circ2circ
 from . import circ2tikz
 from . import cnot_mapper
-   
+
+
 def main(argv):
-    parser = argparse.ArgumentParser(prog="PyZX", description="PyZX commandline interface",
-                                     usage=usage_string)
-    parser.add_argument('command', help='Command to run')
+    parser = argparse.ArgumentParser(
+        prog="PyZX", description="PyZX commandline interface", usage=usage_string
+    )
+    parser.add_argument("command", help="Command to run")
     if len(argv) == 1:
         parser.print_help()
         exit(1)
     args = parser.parse_args(argv[1:2])
-    if args.command not in ('opt', 'tikz', 'mapper'):
+    if args.command not in ("opt", "tikz", "mapper"):
         print("Unrecognized command '{}'".format(args.command))
         parser.print_help()
         exit(1)
 
-    if args.command == 'opt':
+    if args.command == "opt":
         circ2circ.main(argv[2:])
-    if args.command == 'tikz':
+    if args.command == "tikz":
         circ2tikz.main(argv[2:])
-    if args.command == 'mapper':
+    if args.command == "mapper":
         cnot_mapper.main(argv[2:])

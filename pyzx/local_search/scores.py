@@ -20,8 +20,9 @@ This module contains objective functions to guide local search over ZX-diagrams.
 """
 
 import sys
-if __name__ == '__main__':
-    sys.path.append('..')
+
+if __name__ == "__main__":
+    sys.path.append("..")
 from pyzx.extract import extract_circuit
 from pyzx.simplify import full_reduce
 from pyzx.optimize import basic_optimization
@@ -36,6 +37,7 @@ def wgc(c, two_qb_weight=10):
     n2 = c_tmp.twoqubitcount()
     single_qubit_count = total - n2
     return two_qb_weight * n2 + single_qubit_count
+
 
 # Weighted gate count of a ZX-diagram
 def g_wgc(g, two_qb_weight=10, g_simplify=False, c_simplify=True):

@@ -1,4 +1,4 @@
-# PyZX - Python library for quantum circuit rewriting 
+# PyZX - Python library for quantum circuit rewriting
 #        and optimization using the ZX-calculus
 # Copyright (C) 2018 - Aleks Kissinger and John van de Wetering
 
@@ -18,9 +18,10 @@
 import unittest
 import random
 import sys
-if __name__ == '__main__':
-    sys.path.append('..')
-    sys.path.append('.')
+
+if __name__ == "__main__":
+    sys.path.append("..")
+    sys.path.append(".")
 
 try:
     try:
@@ -43,36 +44,34 @@ SEED = 1337
 
 @unittest.skipUnless(np, "numpy needs to be installed for this to run")
 class TestExtract(unittest.TestCase):
-
     def test_extract_circuit(self):
         random.seed(SEED)
         for i in range(5):
-            circ = cliffordT(4,50,0.1)
-            t = tensorfy(circ,False)
-            clifford_simp(circ,quiet=True)
+            circ = cliffordT(4, 50, 0.1)
+            t = tensorfy(circ, False)
+            clifford_simp(circ, quiet=True)
             with self.subTest(i=i):
                 c = extract_circuit(circ)
                 t2 = c.to_tensor(False)
-                self.assertTrue(compare_tensors(t,t2,False))
+                self.assertTrue(compare_tensors(t, t2, False))
 
     def test_cz_optimize_extract(self):
         qb_no = 8
         c = Circuit(qb_no)
         for i in range(qb_no):
-            for j in range(i+1,qb_no):
-                c.add_gate("CZ",i,j)
+            for j in range(i + 1, qb_no):
+                c.add_gate("CZ", i, j)
 
         g = c.to_graph()
-        clifford_simp(g,quiet=True)
+        clifford_simp(g, quiet=True)
         c2 = extract_circuit(g)
         cnot_count = 0
         for gate in c2.gates:
             if isinstance(gate, CNOT):
-                cnot_count+=1
-        self.assertTrue(cnot_count==4)
+                cnot_count += 1
+        self.assertTrue(cnot_count == 4)
         self.assertTrue(c.verify_equality(c2))
-        
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
