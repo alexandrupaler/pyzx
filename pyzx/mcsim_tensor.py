@@ -52,11 +52,11 @@ def H_to_tensor(arity: int, phase: float) -> np.ndarray:
 
 # Nu cred ca e bine de  ce e ls fel??
 def input_to_tensor() -> np.ndarray:
-    return np.array([1, 0])  # np.identity(2) #np.array([1, 0])
+    return np.identity(2)  # np.identity(2) #np.array([1, 0])
 
 
 def output_to_tensor() -> np.ndarray:
-    return np.array([1, 0])  # np.array([1, 0])
+    return np.identity(2)  # np.array([1, 0])
 
 
 def mcs_tensorfy(
@@ -70,8 +70,7 @@ def mcs_tensorfy(
 
     nodes, edge_list = get_nodes_edges(g)
 
-    input_nodes = g.inputs()
-    output_nodes = g.outputs()
+    had = 1 / sqrt(2) * np.array([[1, 1], [1, -1]])
 
     named_contraction_order = [
         get_edges_from_g(g).index(ce) for ce in contraction_order
@@ -116,13 +115,18 @@ def mcs_tensorfy(
                     edge_list[inp_edge]["out"] = edge["out"]
 
         # calcualte the new tensor and update
+
+        """
         print("\n##calculate new tensor##")
         if output_node.index in output_nodes:
             print("!!output reached!!")
-        else:
-            new_tensor = np.tensordot(
-                input_node.tensor, output_node.tensor, axes=(ni_axes, no_axes)
-            )
+        elif input_node in input_nodes:
+            print("!!input node!!")
+        """
+        print("\n##calculate new tensor##")
+        new_tensor = np.tensordot(
+            input_node.tensor, output_node.tensor, axes=(ni_axes, no_axes)
+        )
         output_node.set_tensor(new_tensor)
 
         # update node edges
@@ -164,6 +168,8 @@ def mcs_tensorfy(
         tensor *= g.scalar.to_number()
     print("tensor shape:", tensor.shape)
     print("final tensor:", tensor)
+
+    print("t_dot")
     return tensor
 
 
@@ -173,7 +179,7 @@ def get_nodes_edges(g: "BaseGraph[VT,ET]"):
     edges = {}
     edge_index = 0
     for edg in get_edges_from_g(g):
-        edges[edge_index] = {"inp": min(edg), "out": max(edg)}
+        edges[edge_index] = {"inp": min(edg), "out": max(edg), "type": g.edge_type(edg)}
         edge_index = edge_index + 1
 
     for v in g.vertices():

@@ -286,6 +286,11 @@ def tensorfy(g: "BaseGraph[VT,ET]", preserve_scalar: bool = True) -> np.ndarray:
     # sparse_tensor = tensorfy_scipy(g, preserve_scalar)
     # assert (sparse_tensor == tensor)
 
+    print("@@ tensorfy @@")
+
+    print("tesnsor shape:", tensor.shape)
+    print("tensor:", tensor)
+
     return tensor
 
 
