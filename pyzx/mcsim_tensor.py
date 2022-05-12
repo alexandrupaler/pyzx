@@ -49,11 +49,15 @@ def H_to_tensor(arity: int, phase: float) -> np.ndarray:
         m[-1] = np.exp(1j * phase)
     return m.reshape([2] * arity)
 
+
 # Nu cred ca e bine de  ce e ls fel??
 def input_to_tensor() -> np.ndarray:
-    return  np.array([1, 0]) #np.identity(2) #np.array([1, 0])
+    return np.array([1, 0])  # np.identity(2) #np.array([1, 0])
+
+
 def output_to_tensor() -> np.ndarray:
-    return  np.array([1, 0])#np.array([1, 0])
+    return np.array([1, 0])  # np.array([1, 0])
+
 
 def mcs_tensorfy(
     contraction_order,
@@ -66,20 +70,18 @@ def mcs_tensorfy(
 
     nodes, edge_list = get_nodes_edges(g)
 
-    input_nodes=g.inputs()
-    output_nodes=g.outputs()
-
+    input_nodes = g.inputs()
+    output_nodes = g.outputs()
 
     named_contraction_order = [
         get_edges_from_g(g).index(ce) for ce in contraction_order
     ]
     print("graph edge_list :", edge_list)
-    print("contraction_order 0:",named_contraction_order)
+    print("contraction_order 0:", named_contraction_order)
 
+    while len(named_contraction_order) > 0:
 
-    while len(named_contraction_order)>0:
-
-        contraction_edge=named_contraction_order[0]
+        contraction_edge = named_contraction_order[0]
         print("\n## contraction_edge in named_contraction_order ##")
 
         edge = edge_list[contraction_edge]
@@ -119,8 +121,8 @@ def mcs_tensorfy(
             print("!!output reached!!")
         else:
             new_tensor = np.tensordot(
-            input_node.tensor, output_node.tensor, axes=(ni_axes, no_axes)
-        )
+                input_node.tensor, output_node.tensor, axes=(ni_axes, no_axes)
+            )
         output_node.set_tensor(new_tensor)
 
         # update node edges
@@ -140,7 +142,7 @@ def mcs_tensorfy(
 
         # update the edge_list
         # remove contracted edges
-        print("deprecate edges:",je)
+        print("deprecate edges:", je)
         for deprecate_edge in je:
             if deprecate_edge in named_contraction_order:
                 named_contraction_order.remove(deprecate_edge)
@@ -157,7 +159,7 @@ def mcs_tensorfy(
         tensor = nodes[node].tensor
         break
 
-    print("tensor:",tensor)
+    print("tensor:", tensor)
     if preserve_scalar:
         tensor *= g.scalar.to_number()
     print("tensor shape:", tensor.shape)
@@ -207,7 +209,7 @@ def get_tensor_from_g(g, v):
     if v in g.inputs():
         return input_to_tensor()
     if v in g.outputs():
-        return output_to_tensor() #np.identity(2)
+        return output_to_tensor()  # np.identity(2)
 
     if v_type == 1:
         t = Z_to_tensor(arity, phase)
