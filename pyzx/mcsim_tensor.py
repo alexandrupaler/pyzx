@@ -1,7 +1,5 @@
 from math import pi, sqrt
 
-import pyzx
-
 try:
     import cupy as np
 except:
@@ -49,101 +47,99 @@ def H_to_tensor(arity: int, phase: float) -> np.ndarray:
     return m.reshape([2] * arity)
 
 
-# Nu cred ca e bine de  ce e ls fel??
+
 def input_to_tensor() -> np.ndarray:
     return np.identity(2)  # np.identity(2) #np.array([1, 0])
-
 
 def output_to_tensor() -> np.ndarray:
     return np.identity(2)  # np.array([1, 0])
 
 
-def mcs_tensorfy(
+def mcs_tensorfy(g, contraction_order, preserve_scalar: bool = True ) -> np.ndarray:
+    """
 
-        g,
-        contraction_order,
-        preserve_scalar: bool = True,
-) -> np.ndarray:
+    """
+
     print(
         "\n############################################## msc tensorfy ##############################################"
     )
 
-    nodes, edge_list = get_nodes_edges(g)
-
+    # Hadamard gate tensor will be used for the Hadamard edges.
     had = 1 / sqrt(2) * np.array([[1, 1], [1, -1]])
 
+    # Dictionaries with the nodes and edges in the graph.
+    nodes, edge_list = get_nodes_edges(g)
+
+    # Contracting order is provided like a list of tuples, and now we change it into a list of indexes.
     named_contraction_order = [
         get_edges_from_g(g).index(ce) for ce in contraction_order
     ]
+
+
     print("graph edge_list :", edge_list)
     print("contraction_order 0:", named_contraction_order)
 
+    # Now, we contract the edges until the contraction list is empty
     while len(named_contraction_order) > 0:
+        print("\n## contraction_edge in named_contraction_order ##\n")
 
-        contraction_edge = named_contraction_order[0]
-        print("\n## contraction_edge in named_contraction_order ##")
-
-        edge = edge_list[contraction_edge]
+        contraction_edge_index = named_contraction_order[0]
+        edge = edge_list[contraction_edge_index]
         input_node = nodes[edge["inp"]]
         output_node = nodes[edge["out"]]
 
-        print("edge under contraction:", contraction_edge)
-        print("input:{}\noutput:{}".format(edge["inp"], edge["out"]))
+        print("## edge under contraction:", contraction_edge_index)
+        print("## input:{} | output:{}".format(edge["inp"], edge["out"]))
 
-        # get the joint e
-        # edges between the nodes and contraction axes.
-        ni_axes = []
-        no_axes = []
-        je = []
+
+        ni_axes = [] # contraction axes for the input node.
+        no_axes = [] # contraction axes for the output node.
+        je = []      # joint edges between the nodes.
+                     # We will need ned to contract over all of the joint edges.
 
         print("\ninput node edges:", input_node.edges)
         op = [(edge_list[k]["inp"], edge_list[k]["out"]) for k in input_node.edges]
         print("input node edges:", op)
 
+        # Populate the contraction axes and joint edges
         for i, inp_edge in enumerate(input_node.edges):
-            print("##")
-            print("edge_axes in input:{}\nedge:{}".format(i, inp_edge))
+            print("#### Populate the contraction axes and joint edges ####")
+            print("#### edge_axes in input:{}\n edge:{}".format(i, inp_edge))
             if inp_edge in output_node.edges:
                 ni_axes.append(i)
                 no_axes.append(output_node.edges.index(inp_edge))
                 je.append(inp_edge)
             else:
-                # update the new ends of new edges
+                # update the new ends of edge
                 if edge_list[inp_edge]["inp"] == edge["inp"]:
                     edge_list[inp_edge]["inp"] = edge["out"]
                 if edge_list[inp_edge]["out"] == edge["inp"]:
                     edge_list[inp_edge]["out"] = edge["out"]
 
-        # calcualte the new tensor and update
-
-        """
-        print("\n##calculate new tensor##")
-        if output_node.index in output_nodes:
-            print("!!output reached!!")
-        elif input_node in input_nodes:
-            print("!!input node!!")
-        """
-
+        # treat the Hadamard edges
+        # need to be verrified
         for c_e in je:
-            print("## edge type:", edge_list[c_e]["type"])
+            print("#### Treat Hadamard edges ####")
             if edge_list[c_e]["type"] == EdgeType.HADAMARD:
+                # get the contraction axes in input tensor
                 inp_axis_connected_with_had = [input_node.edges.index(c_e)]
+                # contract with the hadamard and update the input tensor
                 new_tensor = np.tensordot(
-                    input_node.tensor, had, axes=(inp_axis_connected_with_had, [1])
+                    input_node.tensor, had, axes=(inp_axis_connected_with_had, [0])
                 )
                 input_node.set_tensor(new_tensor)
 
-                # remove contracted edge and add it again at the end
-                print("input node edges before H:", input_node.edges)
+                # remove contracted edge and add it again at the right place
+                print("#### input node edges before H:", input_node.edges)
                 input_node.edges.remove(c_e)
                 input_node.edges.append(c_e)
-                print("input node edges after H:", input_node.edges)
+                print("#### input node edges after H:", input_node.edges)
 
-                print("recalculate input axes ")
+                # recalculate contraction axes for the modified tensor
+                print("#### recalculate input axes ")
                 ni_axes = []
                 for i, inp_edge in enumerate(input_node.edges):
-                    print("##")
-                    print("edge_axes in input:{}\nedge:{}".format(i, inp_edge))
+                    print("## edge_axes in input:{}\nedge:{}".format(i, inp_edge))
                     if inp_edge in output_node.edges:
                         ni_axes.append(i)
 
@@ -198,8 +194,13 @@ def mcs_tensorfy(
 
 
 def get_nodes_edges(g: "BaseGraph[VT,ET]"):
+
     nodes = {}
     edges = {}
+
+    # The index represents the key to the edge in dic. edges.  Each edge has an input, an output amnd a type.
+    # In the beginning, the nodes are labeled in such a way that the one with the smaller index is the input.
+    # The type may indicate the presence of a Hadamard gate between the end vertices.
     edge_index = 0
     for edg in get_edges_from_g(g):
         edges[edge_index] = {
@@ -209,6 +210,7 @@ def get_nodes_edges(g: "BaseGraph[VT,ET]"):
         }
         edge_index = edge_index + 1
 
+    # The key of a node will be its initial index
     for v in g.vertices():
         node = Node(v, g)
         nodes[v] = node
