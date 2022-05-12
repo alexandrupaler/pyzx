@@ -125,14 +125,14 @@ def mcs_tensorfy(g, contraction_order, preserve_scalar: bool = True ) -> np.ndar
                 inp_axis_connected_with_had = [input_node.edges.index(c_e)]
                 # contract with the hadamard and update the input tensor
                 new_tensor = np.tensordot(
-                    input_node.tensor, had, axes=(inp_axis_connected_with_had, [0])
+                    input_node.tensor,had, axes=(inp_axis_connected_with_had,[1] )
                 )
                 input_node.set_tensor(new_tensor)
 
                 # remove contracted edge and add it again at the right place
                 print("#### input node edges before H:", input_node.edges)
                 input_node.edges.remove(c_e)
-                input_node.edges.append(c_e)
+                input_node.edges.insert(0,c_e)#append(c_e)
                 print("#### input node edges after H:", input_node.edges)
 
                 # recalculate contraction axes for the modified tensor
@@ -143,9 +143,13 @@ def mcs_tensorfy(g, contraction_order, preserve_scalar: bool = True ) -> np.ndar
                     if inp_edge in output_node.edges:
                         ni_axes.append(i)
 
+
+
+
+
         print("\n##calculate new tensor##")
         new_tensor = np.tensordot(
-            input_node.tensor, output_node.tensor, axes=(ni_axes, no_axes)
+             input_node.tensor,output_node.tensor, axes=(ni_axes, no_axes)
         )
         output_node.set_tensor(new_tensor)
 
@@ -178,6 +182,10 @@ def mcs_tensorfy(g, contraction_order, preserve_scalar: bool = True ) -> np.ndar
 
     print("####\n Remaining edges:{} \n \n####".format(named_contraction_order))
     print("\n ###### final nodes:{}\n#### ".format(nodes))
+
+    if (len(nodes.keys())>1):
+        raise Exception("You have more than one final node. This means that you can treat your circuit as two separate circuits!")
+        return 1
 
     for node in nodes:
         tensor = nodes[node].tensor
