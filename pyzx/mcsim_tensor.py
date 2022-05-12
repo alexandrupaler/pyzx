@@ -9,7 +9,6 @@ except:
 
     np.set_printoptions(suppress=True)
 
-
 # typing imports
 from typing import TYPE_CHECKING, List, Dict, Union
 from .utils import FractionLike, FloatInt, VertexType, EdgeType
@@ -31,11 +30,11 @@ def Z_to_tensor(arity: int, phase: float) -> np.ndarray:
 
 
 def X_to_tensor(arity: int, phase: float) -> np.ndarray:
-    m = np.ones(2**arity, dtype=complex)
+    m = np.ones(2 ** arity, dtype=complex)
     if arity == 0:
         m[()] = 1 + np.exp(1j * phase)
         return m
-    for i in range(2**arity):
+    for i in range(2 ** arity):
         if bin(i).count("1") % 2 == 0:
             m[i] += np.exp(1j * phase)
         else:
@@ -44,7 +43,7 @@ def X_to_tensor(arity: int, phase: float) -> np.ndarray:
 
 
 def H_to_tensor(arity: int, phase: float) -> np.ndarray:
-    m = np.ones(2**arity, dtype=complex)
+    m = np.ones(2 ** arity, dtype=complex)
     if phase != 0:
         m[-1] = np.exp(1j * phase)
     return m.reshape([2] * arity)
@@ -60,9 +59,10 @@ def output_to_tensor() -> np.ndarray:
 
 
 def mcs_tensorfy(
-    contraction_order,
-    g: "BaseGraph[VT,ET]",
-    preserve_scalar: bool = True,
+
+        g,
+        contraction_order,
+        preserve_scalar: bool = True,
 ) -> np.ndarray:
     print(
         "\n############################################## msc tensorfy ##############################################"
@@ -123,6 +123,30 @@ def mcs_tensorfy(
         elif input_node in input_nodes:
             print("!!input node!!")
         """
+
+        for c_e in je:
+            print("## edge type:", edge_list[c_e]["type"])
+            if edge_list[c_e]["type"] == EdgeType.HADAMARD:
+                inp_axis_connected_with_had = [input_node.edges.index(c_e)]
+                new_tensor = np.tensordot(
+                    input_node.tensor, had, axes=(inp_axis_connected_with_had, [1])
+                )
+                input_node.set_tensor(new_tensor)
+
+                # remove contracted edge and add it again at the end
+                print("input node edges before H:", input_node.edges)
+                input_node.edges.remove(c_e)
+                input_node.edges.append(c_e)
+                print("input node edges after H:", input_node.edges)
+
+                print("recalculate input axes ")
+                ni_axes = []
+                for i, inp_edge in enumerate(input_node.edges):
+                    print("##")
+                    print("edge_axes in input:{}\nedge:{}".format(i, inp_edge))
+                    if inp_edge in output_node.edges:
+                        ni_axes.append(i)
+
         print("\n##calculate new tensor##")
         new_tensor = np.tensordot(
             input_node.tensor, output_node.tensor, axes=(ni_axes, no_axes)
@@ -174,12 +198,15 @@ def mcs_tensorfy(
 
 
 def get_nodes_edges(g: "BaseGraph[VT,ET]"):
-
     nodes = {}
     edges = {}
     edge_index = 0
     for edg in get_edges_from_g(g):
-        edges[edge_index] = {"inp": min(edg), "out": max(edg), "type": g.edge_type(edg)}
+        edges[edge_index] = {
+            "inp": min(edg),
+            "out": max(edg),
+            "type": g.edge_type(g.edge(edg[0], edg[1])),
+        }
         edge_index = edge_index + 1
 
     for v in g.vertices():
@@ -205,7 +232,6 @@ class Node:
 
 
 def get_tensor_from_g(g, v):
-
     phase = pi * g.phases()[v]
     v_type = g.types()[v]
     arity = len(g.neighbors(v))

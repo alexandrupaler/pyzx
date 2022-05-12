@@ -36,7 +36,9 @@ class MansikkaExtractor(BaseExtractor):
         print("Ok here !!")
 
         # return graph.to_matrix()
-        return mcs_tensorfy(contraction_order, graph, preserve_scalar=True)
+        return graph.to_matrix(
+            contraction_order=contraction_order
+        )  # mcs_tensorfy(contraction_order, graph, preserve_scalar=True)
 
 
 def get_contraction_order(graph, m, nr_iter=10):
