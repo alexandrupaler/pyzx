@@ -116,6 +116,9 @@ def mcs_tensorfy(g, contraction_order, preserve_scalar: bool = True ) -> np.ndar
                 if edge_list[inp_edge]["out"] == edge["inp"]:
                     edge_list[inp_edge]["out"] = edge["out"]
 
+
+
+#######################################################################################################
         # treat the Hadamard edges
         # need to be verrified
         for c_e in je:
@@ -142,9 +145,7 @@ def mcs_tensorfy(g, contraction_order, preserve_scalar: bool = True ) -> np.ndar
                     print("## edge_axes in input:{}\nedge:{}".format(i, inp_edge))
                     if inp_edge in output_node.edges:
                         ni_axes.append(i)
-
-
-
+######################################################################################################
 
 
         print("\n##calculate new tensor##")
