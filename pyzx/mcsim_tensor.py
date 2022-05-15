@@ -1,5 +1,5 @@
 from math import pi, sqrt
-
+from .tensor import tensor_to_matrix
 try:
     import cupy as np
 except:
@@ -24,6 +24,9 @@ def Z_to_tensor(arity: int, phase: float) -> np.ndarray:
         return m
     m[(0,) * arity] = 1
     m[(1,) * arity] = np.exp(1j * phase)
+    print("@Z_tensor@")
+    print("shape:", m.shape)
+    print("tensor:", m)
     return m
 
 
@@ -37,7 +40,12 @@ def X_to_tensor(arity: int, phase: float) -> np.ndarray:
             m[i] += np.exp(1j * phase)
         else:
             m[i] -= np.exp(1j * phase)
-    return np.power(np.sqrt(0.5), arity) * m.reshape([2] * arity)
+    tens = np.power(np.sqrt(0.5), arity) * m.reshape([2] * arity)
+
+    print("@X_tensor@")
+    print("shape:", tens.shape)
+    print("tensor:", tens)
+    return tens
 
 
 def H_to_tensor(arity: int, phase: float) -> np.ndarray:
@@ -69,6 +77,39 @@ def mcs_tensorfy(g, contraction_order, preserve_scalar: bool = True ) -> np.ndar
 
     # Dictionaries with the nodes and edges in the graph.
     nodes, edge_list = get_nodes_edges(g)
+
+    # move the ede with  inputs at the end
+    inp_order = [ contraction_order[0] for i in range(len(g.inputs())) ]
+
+    co_copy = contraction_order.copy()
+    for edge in co_copy:
+        if edge[0] in g.inputs():
+            position=len(g.inputs())-edge[0]-1
+            print("index", position)
+            inp_order[position] = edge
+
+    for edge in inp_order:
+        contraction_order.remove(edge)
+        contraction_order.append(edge)
+    print("input_order:",inp_order )
+
+
+    # move the ede with  output at the end
+    output_order = [ contraction_order[0] for i in range(len(g.outputs())) ]
+    nr_vert=len(g.vertices())
+
+    co_copy = contraction_order.copy()
+    for edge in co_copy:
+        if edge[1] in g.outputs():
+            position= len(g.outputs())-(nr_vert-edge[1]-1) -1
+            print("index", nr_vert-edge[1]-1)
+            output_order[position] = edge
+
+    for edge in output_order:
+        contraction_order.remove(edge)
+        contraction_order.append(edge)
+    print("output_order:",output_order )
+
 
     # Contracting order is provided like a list of tuples, and now we change it into a list of indexes.
     named_contraction_order = [
@@ -106,7 +147,10 @@ def mcs_tensorfy(g, contraction_order, preserve_scalar: bool = True ) -> np.ndar
             print("#### Populate the contraction axes and joint edges ####")
             print("#### edge_axes in input:{}\n edge:{}".format(i, inp_edge))
             if inp_edge in output_node.edges:
-                ni_axes.append(i)
+                if edge_list[inp_edge]["inp"] in g.inputs():
+                    ni_axes.append(1)#1
+                else:
+                    ni_axes.append(i)
                 no_axes.append(output_node.edges.index(inp_edge))
                 je.append(inp_edge)
             else:
@@ -115,6 +159,7 @@ def mcs_tensorfy(g, contraction_order, preserve_scalar: bool = True ) -> np.ndar
                     edge_list[inp_edge]["inp"] = edge["out"]
                 if edge_list[inp_edge]["out"] == edge["inp"]:
                     edge_list[inp_edge]["out"] = edge["out"]
+
 
 
 
@@ -148,12 +193,21 @@ def mcs_tensorfy(g, contraction_order, preserve_scalar: bool = True ) -> np.ndar
 ######################################################################################################
 
 
-        print("\n##calculate new tensor##")
+        print("\n##!!calculate new tensor!!##")
+
+        print("inp _tensor:\n",input_node.tensor)
+        print("output _tensor:\n",output_node.tensor)
+        print("ni:{}|no{}".format(ni_axes,no_axes))
         new_tensor = np.tensordot(
              input_node.tensor,output_node.tensor, axes=(ni_axes, no_axes)
         )
         output_node.set_tensor(new_tensor)
-
+        if (len(named_contraction_order)>=1):
+            print("@@@@@@@@@@@tensor@@@@@@@@@@@@@@@")
+            print(new_tensor)
+            print("@@matrix@@")
+            print(tensor_to_matrix(new_tensor,2,2))
+            print("@@@@@@@@@@@@@@@@@@@@@@@@@@")
         # update node edges
         new_edges = []
         for e in input_node.edges:
@@ -192,13 +246,19 @@ def mcs_tensorfy(g, contraction_order, preserve_scalar: bool = True ) -> np.ndar
         tensor = nodes[node].tensor
         break
 
+    perm = []
+    for i in range(2 * len(g.inputs())):
+        perm = [3, 2, 1, 0]
+    tensor = np.transpose(tensor, perm)
+
+
     print("tensor:", tensor)
     if preserve_scalar:
         tensor *= g.scalar.to_number()
     print("tensor shape:", tensor.shape)
     print("final tensor:", tensor)
+    print("final mat:", tensor_to_matrix(tensor,2,2))
 
-    print("t_dot")
     return tensor
 
 

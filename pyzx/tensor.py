@@ -279,6 +279,7 @@ def tensorfy(g: "BaseGraph[VT,ET]", preserve_scalar: bool = True) -> np.ndarray:
     for i in range(len(inputs)):
         perm.append(i)
 
+    print("$$: perm:",perm)
     tensor = np.transpose(tensor, perm)
 
     # Test that sparse works
