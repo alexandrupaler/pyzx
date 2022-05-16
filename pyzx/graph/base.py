@@ -27,8 +27,6 @@ try:
 except:
     import numpy as np
 
-from pyzx.mcsim_tensor import mcs_tensorfy
-
 from ..utils import EdgeType, VertexType, toggle_edge, vertex_is_zx, toggle_vertex
 from ..utils import FloatInt, FractionLike
 from ..tensor import tensorfy, tensor_to_matrix
@@ -510,15 +508,15 @@ class BaseGraph(Generic[VT, ET], metaclass=DocstringMeta):
         return tensorfy(self, preserve_scalar)
 
     def to_matrix(
-        self, preserve_scalar: bool = True, contraction_order=None
+        self, preserve_scalar: bool = True, my_tensorfy = None, contraction_order = None
     ) -> np.ndarray:
         """Returns a representation of the graph as a matrix using :func:`~pyzx.tensor.tensorfy`"""
         # return tensor_to_matrix(tensorfy(self, preserve_scalar), len(self.inputs), len(self.outputs))
 
-        if contraction_order == None:
+        if my_tensorfy is None:
             tensor = tensorfy(self, preserve_scalar)
-        else:
-            tensor = mcs_tensorfy(self, contraction_order, preserve_scalar)
+        elif contraction_order is not None:
+            tensor = my_tensorfy(self, contraction_order, preserve_scalar)
 
         import time
 

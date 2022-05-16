@@ -1,85 +1,67 @@
-"""
-
-"""
-
-
+import random
 import numpy as np
-
 import pyzx
 
 from mcsim import McSimPipeline
-from mcsim.constants import CircFormat
 from mcsim.extractors import MansikkaExtractor, MansikkaGraph
 
 
 ## Pipeline example  ##
 print("\n\n ## Mansikka example ##")
 
+baseline_pipeline = McSimPipeline(name="baseline")
+
+mansikka_extractor = MansikkaExtractor(params={"m": 2, "nr_iter": 6})
+mansikka_pipeline = McSimPipeline(name="mansikka", extractor=mansikka_extractor)
 
 qubits = 2
-depth = 1
+depth = 3
 
-circuit = pyzx.generate.CNOT_HAD_PHASE_circuit(qubits, depth, clifford=True)
-zx_graph = circuit.to_graph()
-print("@@@@@@@@")
-pyzx.draw_matplotlib(zx_graph, labels=True, figsize=(8, 2), h_edge_draw='blue', show_scalar=False, rows=None).savefig("circuit.png")
+# Force seed
+random.seed(1)
+circuit = pyzx.generate.CNOT_HAD_PHASE_circuit(qubits, depth, p_had=0.0, clifford=True)
+# Visualising the circuit
+pyzx.draw_matplotlib(circuit.to_graph(), labels=False, figsize=(8, 2), h_edge_draw='blue', show_scalar=False, rows=None).savefig("circuit_0.png")
 
-example_graph = MansikkaGraph([k for k in zx_graph.vertices()], zx_graph.edge_set().copy())
-elimination_order = [k for k in zx_graph.vertices()]
+baseline_circ, baseline_graph = baseline_pipeline.load(circuit)
+matrix_0 = baseline_pipeline.extract(baseline_graph)
 
-tw = example_graph.find_treewidth_from_order(elimination_order)
-print("treewidth :", tw)
+mansikka_circ, mansikka_graph = mansikka_pipeline.load(circuit)
+matrix_1 = mansikka_pipeline.extract(mansikka_graph)
 
+print("Baseline matrix \n", matrix_0)
+print("        Mansikka\n", matrix_1)
+print("Equals:         \n", np.equal(matrix_0, matrix_1))
 
-initial_state = np.zeros((2**qubits,))
-initial_state[1] = 1
+# for state in range(2**qubits):
+#     print("##########\n state:{} #######".format(state))
+#     initial_state = np.zeros((2 ** qubits,))
+#     initial_state[state] = 1
+#
+#     # The baseline result
+#     result_0 = baseline_pipeline.evaluate(initial_state, matrix_0)
+#
+#     # Our contraction order + tensorfy
+#     result_1 = mansikka_pipeline.evaluate(initial_state, matrix_1)
+#
+#     print("##########s state:{} #######".format(state))
+#     print("baseline:", result_0)
+#     print("    ours:", result_1)
 
-# pyzx.draw_matplotlib(example_graph, labels=False, figsize=(8, 2), h_edge_draw='blue', show_scalar=False, rows=None).savefig("graph_0.png")
-
-pipeline = McSimPipeline(name="sim1")
-result0 = pipeline.simulate(initial_state, circuit)
-print("r0:", result0)
-
-params = {"m": 2, "nr_iter": 6}
-mansikka_extractor = MansikkaExtractor(params=params)
-pipelineMansikka = McSimPipeline(name="basicMansikka", extractor=mansikka_extractor)
-loaded_circ, loaded_graph = pipelineMansikka.load(circuit)
-
-matrix = pipelineMansikka.extract(loaded_graph)
-result = pipelineMansikka.evaluate(initial_state, matrix)
-# retrieved_circuit = pipelineMansikka.get_circuit(zx_graph, circuit_format=CircFormat.PYZX)
-
-print("r0:", result0)
-print("r9:", result)
-
-
-
-for state in range(2**qubits):
-    print("##########\n state:{} #######".format(state))
-    initial_state = np.zeros((2 ** qubits,))
-    initial_state[state] = 1
-
-    pipeline = McSimPipeline(name="sim1")
-    result0 = pipeline.simulate(initial_state, circuit)
-
-    params = {"m": 2, "nr_iter": 6}
-    mansikka_extractor = MansikkaExtractor(params=params)
-    pipelineMansikka = McSimPipeline(name="basicMansikka", extractor=mansikka_extractor)
-    loaded_circ, loaded_graph = pipelineMansikka.load(circuit)
-
-    matrix = pipelineMansikka.extract(loaded_graph)
-    result = pipelineMansikka.evaluate(initial_state, matrix)
-
-    print("##########s state:{} #######".format(state))
-    print("r0:", result0)
-    print("r9:", result)
-
+print("\n\n Mansikka Done !")
 
 #####################################################
 
+def test_trewidth(circuit):
+    zx_graph = circuit.to_graph()
+    print("@@@@@@@@")
+    pyzx.draw_matplotlib(zx_graph, labels=True, figsize=(8, 2), h_edge_draw='blue', show_scalar=False, rows=None).savefig("circuit.png")
 
-print("\n\n Done !")
+    example_graph = MansikkaGraph([k for k in zx_graph.vertices()], zx_graph.edge_set().copy())
+    elimination_order = [k for k in zx_graph.vertices()]
 
+    tw = example_graph.find_treewidth_from_order(elimination_order)
+    print("treewidth :", tw)
 
 """
 ###################################################

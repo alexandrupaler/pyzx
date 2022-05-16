@@ -36,8 +36,6 @@ from .circuit import Circuit
 
 # TODO: This file needs some cleanup, as probably all functions should just return a Circuit instead of a Graph
 
-random.seed(1)
-
 def identity(
     qubits: int, depth: FloatInt = 1, backend: Optional[str] = None
 ) -> BaseGraph:

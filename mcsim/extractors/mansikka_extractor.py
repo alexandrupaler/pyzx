@@ -8,7 +8,7 @@ import pyzx
 from .base_extractor import BaseExtractor
 from .mansikka_graph import MansikkaGraph
 
-from pyzx.mcsim_tensor import mcs_tensorfy
+from mcsim.mcsim_tensor import mcsim_tensorfy
 
 
 class MansikkaExtractor(BaseExtractor):
@@ -35,7 +35,8 @@ class MansikkaExtractor(BaseExtractor):
 
         # return graph.to_matrix()
         return graph.to_matrix(
-            contraction_order=contraction_order
+            my_tensorfy = mcsim_tensorfy,
+            contraction_order = contraction_order
         )  # mcs_tensorfy(contraction_order, graph, preserve_scalar=True)
 
 
