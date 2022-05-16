@@ -39,7 +39,7 @@ class MansikkaExtractor(BaseExtractor):
         )  # mcs_tensorfy(contraction_order, graph, preserve_scalar=True)
 
 
-def get_contraction_order(graph, m, nr_iter=10):
+def get_contraction_order(graph, nr_tensors_to_rem, nr_iter=10):
 
     working_graph = MansikkaGraph(graph.vertices.copy(), graph.edges.copy())
     initial_order = [k for k in graph.vertices]
@@ -52,8 +52,9 @@ def get_contraction_order(graph, m, nr_iter=10):
 
     while nr_iter > 0:
         nr_iter = nr_iter - 1
-        reduced_g, reduced_order, tw, removing_order = greedy_treewidth_deletion(
-            working_graph, initial_order, m
+        reduced_g, reduced_order, tw, removing_order = \
+            working_graph.greedy_treewidth_deletion(
+            initial_order, nr_tensors_to_rem
         )
         for node in removing_order:
             contraction_order.append(node)

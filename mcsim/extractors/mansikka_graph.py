@@ -1,13 +1,15 @@
 """
+    Graph structure for implementing the code from
+    https://arxiv.org/abs/2004.10892
 
+    Graph class that we use during the heuristic
+    to stay independent of pyzx graph structure.
+    TODO Alexandru: use networkx instead?
 """
+
 import copy
 
-
 class MansikkaGraph:
-    """
-    Graph class that we use during the heuristic to stay independent of pyzx graph structure.
-    """
 
     def __init__(self, vertices, edges):
 
@@ -16,8 +18,11 @@ class MansikkaGraph:
 
     def neighbourhood(self, node):
         """
-        vertice:
-        return: list of all the neighbors of the node V
+        Args:
+            node:
+
+        Returns: list of all the neighbors of the node node
+
         """
         nb = []
 
@@ -74,112 +79,116 @@ class MansikkaGraph:
         return treewidth
 
 
-def greedy_treewidth_deletion(
-    self, elimination_order, nr_tensors_to_rem, option=0, direct_minimization=False
-):
-    """
+    def greedy_treewidth_deletion(
+        self, elimination_order, nr_tensors_to_rem, option=False, direct_minimization=False
+    ):
+        """
+        Args:
+            self:
+            elimination_order: ??
+            nr_tensors_to_rem: Parameter m from the paper
+            option:
+            direct_minimization:
 
-    Args:
-        self:
-        elimination_order: ??
-        nr_tensors_to_rem: Parameter m from the paper
-        option:
-        direct_minimization:
+        Returns:
 
-    Returns:
-
-    """
-    removed_vertices = []
-    new_graph = copy.deepcopy(self)
-    # new_graph = Graph(self.vertices, self.edges)
-    new_order = elimination_order.copy()
-
-    for j in range(nr_tensors_to_rem):
-
-        if direct_minimization:
-            u = removal_recommendation(
-                new_graph, new_order
-            )  # if new order is given direct treewidth metric is used
-        else:
-            u = removal_recommendation(new_graph)
-
-        # update new graph
-        new_graph.vertices.remove(u)
-
-        edges = new_graph.edges.copy()
-
-        for edge in edges:
-            if u in edge:
-                new_graph.edges.remove(edge)
-
-        # update removed_vertices
-        if u not in removed_vertices:
-            removed_vertices.append(u)
-
-        # update new_order
-        new_order.remove(u)
-        if option == 1:
-            new_order = tree_decomposition(new_graph)
-
-    tw = new_graph.find_treewidth_from_order(new_order)
-
-    return new_graph, new_order, tw, removed_vertices
-
-
-def removal_recommendation(self, order=None):
-    # this will be updated to betweenness centrality
-
-    if order != None:
-        return self.direct_treewidth_minimization(order)
-
-    nr_neighbors = 0
-    recommendation = self.vertices[0]
-    for v in self.vertices:
-        nr_nb = len(self.neighbourhood(v))
-        if nr_nb > nr_neighbors:
-            recommendation = v
-            nr_neighbors = nr_nb
-
-    return recommendation
-
-
-def direct_treewidth_minimization(self, elimination_order):
-
-    # copy
-    working_graph = copy.deepcopy(self)
-    # working_graph = Graph(tensor_graph.vertices.copy(), tensor_graph.edges.copy())
-
-    tw = working_graph.find_treewidth_from_order(elimination_order.copy())
-    delta = 0
-    recommendation = self.vertices[0]
-
-    for u in self.vertices:
-
-        new_order = elimination_order.copy()
-        new_order.remove(u)
-
-        # TODO Alexandru: copy new_graph or working_graph?
+        """
+        removed_vertices = []
         new_graph = copy.deepcopy(self)
-        # new_graph = Graph(self.vertices.copy(), self.edges.copy())
+        # new_graph = Graph(self.vertices, self.edges)
+        new_order = elimination_order.copy()
 
-        new_graph.vertices.remove(u)
-        edges = new_graph.edges.copy()
+        for j in range(nr_tensors_to_rem):
 
-        for edge in edges:
-            if u in edge:
-                new_graph.edges.remove(edge)
+            if direct_minimization:
+                # if new order is given direct treewidth metric is used
+                u = new_graph.removal_recommendation(new_order)
+            else:
+                u = new_graph.removal_recommendation()
 
-        n_tw = new_graph.find_treewidth_from_order(new_order)
+            # update new graph
+            new_graph.vertices.remove(u)
 
-        new_delta = tw - n_tw
+            edges = new_graph.edges.copy()
+            for edge in edges:
+                if u in edge:
+                    new_graph.edges.remove(edge)
 
-        if new_delta <= delta:
-            delta = new_delta
-            recommendation = u
+            # update removed_vertices
+            if u not in removed_vertices:
+                removed_vertices.append(u)
 
-    return recommendation
+            # update new_order
+            new_order.remove(u)
+            if option is True:
+                new_order = new_graph.tree_decomposition()
+
+        tw = new_graph.find_treewidth_from_order(new_order)
+
+        return new_graph, new_order, tw, removed_vertices
 
 
-def tree_decomposition(self):
+    def removal_recommendation(self, order=None):
+        # this will be updated to betweenness centrality
 
-    return None
+        if order != None:
+            return self.direct_treewidth_minimization(order)
+
+        nr_neighbors = 0
+        recommendation = self.vertices[0]
+        for v in self.vertices:
+            nr_nb = len(self.neighbourhood(v))
+            if nr_nb > nr_neighbors:
+                recommendation = v
+                nr_neighbors = nr_nb
+
+        return recommendation
+
+
+    def direct_treewidth_minimization(self, elimination_order):
+
+        # copy
+        working_graph = copy.deepcopy(self)
+        # working_graph = Graph(tensor_graph.vertices.copy(), tensor_graph.edges.copy())
+
+        tw = working_graph.find_treewidth_from_order(elimination_order.copy())
+        delta = 0
+        recommendation = self.vertices[0]
+
+        for u in self.vertices:
+
+            new_order = elimination_order.copy()
+            new_order.remove(u)
+
+            # TODO Alexandru: copy new_graph or working_graph?
+            new_graph = copy.deepcopy(self)
+            # new_graph = Graph(self.vertices.copy(), self.edges.copy())
+
+            new_graph.vertices.remove(u)
+            edges = new_graph.edges.copy()
+
+            for edge in edges:
+                if u in edge:
+                    new_graph.edges.remove(edge)
+
+            n_tw = new_graph.find_treewidth_from_order(new_order)
+
+            new_delta = tw - n_tw
+
+            if new_delta <= delta:
+                delta = new_delta
+                recommendation = u
+
+        return recommendation
+
+
+    def tree_decomposition(self):
+        """
+        Not implemented
+        Args:
+            self:
+
+        Returns:
+
+        """
+        return None
