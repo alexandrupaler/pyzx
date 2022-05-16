@@ -120,7 +120,7 @@ print("removing_order:", removing_order)
 """
 
 ######## ###########################################
-## Pipeline examople  ##
+## Pipeline example  ##
 print("\n\n ## Mansikka example ##")
 
 
