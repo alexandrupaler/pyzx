@@ -11,7 +11,6 @@ from mcsim import McSimPipeline
 from mcsim.constants import CircFormat
 from mcsim.extractors import MansikkaExtractor
 from mcsim.extractors.mansikka import Graph, find_treewidth_from_order
-from mcsim.extractors.mansikka import greedy_treewidth_deletion
 
 """
 ###################################################

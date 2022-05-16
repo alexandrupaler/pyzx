@@ -6,9 +6,7 @@ import numpy as np
 import pyzx
 
 from .base_extractor import BaseExtractor
-from .graph import Graph
-from .treewidth_from_order import find_treewidth_from_order
-from .greedy_treewidth_deletion import greedy_treewidth_deletion
+from .mansikka_graph import MansikkaGraph
 
 from pyzx.mcsim_tensor import mcs_tensorfy
 
@@ -23,7 +21,7 @@ class MansikkaExtractor(BaseExtractor):
         """
 
         print("graph_ edges:", graph.edge_set())
-        working_graph = Graph([k for k in graph.vertices()], graph.edge_set().copy())
+        working_graph = MansikkaGraph([k for k in graph.vertices()], graph.edge_set().copy())
         working_graph = working_graph.construct_dual()
         print("dual vert:", working_graph.vertices)
         print("dual edges: ", working_graph.edges)
@@ -43,11 +41,11 @@ class MansikkaExtractor(BaseExtractor):
 
 def get_contraction_order(graph, m, nr_iter=10):
 
-    working_graph = Graph(graph.vertices.copy(), graph.edges.copy())
+    working_graph = MansikkaGraph(graph.vertices.copy(), graph.edges.copy())
     initial_order = [k for k in graph.vertices]
     contraction_order = []
 
-    initial_tw = find_treewidth_from_order(working_graph, initial_order)
+    initial_tw = working_graph.find_treewidth_from_order(initial_order)
 
     if initial_tw == 1:
         return initial_order
