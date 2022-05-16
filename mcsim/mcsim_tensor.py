@@ -30,8 +30,9 @@ def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = Tr
     reorder_contraction_edge_list(contraction_edge_list, nr_vert, pyzx_graph)
 
     # Contracting order is provided like a list of tuples, and now we change it into a list of ids.
+    edge_list = list(pyzx_graph.edges())
     contraction_ids = [
-        pyzx_graph.edges().index(edge) for edge in contraction_edge_list
+        edge_list.index(edge) for edge in contraction_edge_list
     ]
 
     print("graph edge_list :", mansikka_edge_map)
@@ -68,7 +69,8 @@ def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = Tr
             if mansikka_edge_map[edgex]["inp"] in pyzx_graph.inputs():
                 input_axes.append(1)  # 1
             else:
-                input_axes.append(i)
+                input_axes.append(mansikka_input_node.edge_ids.index(edgex))
+
             output_axes.append(mansikka_output_node.edge_ids.index(edgex))
 
         # for i, inp_edge in enumerate(mansikka_input_node.edge_ids):
@@ -83,6 +85,7 @@ def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = Tr
         #         # joint_edges.append(inp_edge)
         #     else:
         #         # update the new ends of edge
+
         for edgex in edge_id_xor:
             if mansikka_edge_map[edgex]["inp"] == edge["inp"]:
                 mansikka_edge_map[edgex]["inp"] = edge["out"]
