@@ -248,7 +248,8 @@ def mcs_tensorfy(g, contraction_order, preserve_scalar: bool = True ) -> np.ndar
 
     perm = []
     for i in range(2 * len(g.inputs())):
-        perm = [3, 2, 1, 0]
+        #perm.append(len(g.inputs())-i-1)
+        perm=[3,2,1,0]
     tensor = np.transpose(tensor, perm)
 
 

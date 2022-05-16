@@ -162,7 +162,7 @@ print("r9:", result)
 
 
 
-for state in range(4):
+for state in range(2**qubits):
     print("##########\n state:{} #######".format(state))
     initial_state = np.zeros((2 ** qubits,))
     initial_state[state] = 1
