@@ -9,10 +9,13 @@ class MansikkaNode:
 
         assert (isinstance(pyzx_graph, pyzx.graph.graph_s.GraphS))
 
+        self.edge_ids = sort_edges(pyzx_graph, v)
+        """
         self.edge_ids = []
         for i, edge in enumerate(pyzx_graph.edges()):
             if v in edge:
                 self.edge_ids.append(i)
+        """
 
     def set_tensor(self, tensor):
         self.tensor = tensor
@@ -46,3 +49,15 @@ class MansikkaNode:
                 xor_edges.append(edge_id)
 
         return intersection, xor_edges
+
+
+def sort_edges(pyzx_graph, v):
+
+    neighbors = sorted(pyzx_graph.neighbors(v))
+    edge_ids = [-1 for i in range(len(neighbors))]
+    for i, edge in enumerate(pyzx_graph.edges()):
+        if v == edge[1]:
+            edge_ids[neighbors.index(edge[0])]=i
+        if v ==edge[0]:
+            edge_ids[neighbors.index(edge[1])] = i
+    return edge_ids

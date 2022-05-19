@@ -38,8 +38,12 @@ def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = Tr
     print("graph edge_list :", mansikka_edge_map)
     print("contraction_order 0:", contraction_ids)
 
-    # Now, we contract the edges until the contraction list is empty
+
+
+
+    #
     while len(contraction_ids) > 0:
+
         print("\n## contraction_edge in named_contraction_order ##\n")
 
         contraction_edge_index = contraction_ids[0]
@@ -51,20 +55,24 @@ def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = Tr
         print("## edge under contraction:", contraction_edge_index)
         print("## input:{} | output:{}".format(edge["inp"], edge["out"]))
 
+
+        ## Stop
+        if len(contraction_ids)==pyzx_graph.num_outputs()+pyzx_graph.num_inputs():
+            tensor=mansikka_output_node.tensor
+            if preserve_scalar:
+                tensor *= pyzx_graph.scalar.to_number()
+
+            return tensor
+        ##
+
+
         input_axes = [] # contraction axes for the input node.
         output_axes = [] # contraction axes for the output node.
-        # joint_edges = []      # joint edges between the nodes.
-                     # We will need ned to contract over all of the joint edges.
 
-        # print("\ninput node edges:", input_node.edges)
-        # op = [(edge_list[k]["inp"], edge_list[k]["out"]) for k in input_node.edges]
-        # print("input node edges:", op)
-
-        # Populate the contraction axes and joint edges
-        # There is an axis index for each edge_id in a node
-        # The index is for contraction
 
         edge_id_and, edge_id_xor = mansikka_output_node.edge_set_and_xor(mansikka_input_node)
+
+
         for edgex in edge_id_and:
             if mansikka_edge_map[edgex]["inp"] in pyzx_graph.inputs():
                 input_axes.append(1)  # 1
@@ -73,18 +81,7 @@ def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = Tr
 
             output_axes.append(mansikka_output_node.edge_ids.index(edgex))
 
-        # for i, inp_edge in enumerate(mansikka_input_node.edge_ids):
-        #     print("#### Populate the contraction axes and joint edges ####")
-        #     print("#### edge_axes in input:{}\n edge:{}".format(i, inp_edge))
-        #     if inp_edge in mansikka_output_node.edge_ids:
-        #         if mansikka_edge_map[inp_edge]["inp"] in pyzx_graph.inputs():
-        #             input_axes.append(1)#1
-        #         else:
-        #             input_axes.append(i)
-        #         output_axes.append(mansikka_output_node.edge_ids.index(inp_edge))
-        #         # joint_edges.append(inp_edge)
-        #     else:
-        #         # update the new ends of edge
+
 
         for edgex in edge_id_xor:
             if mansikka_edge_map[edgex]["inp"] == edge["inp"]:
@@ -124,41 +121,55 @@ def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = Tr
 
         print("\n##!!calculate new tensor!!##")
 
-        print("inp _tensor:\n",mansikka_input_node.tensor)
-        print("output _tensor:\n",mansikka_output_node.tensor)
+
         print("ni:{}|no{}".format(input_axes,output_axes))
         new_tensor = np.tensordot(
              mansikka_input_node.tensor,mansikka_output_node.tensor, axes=(input_axes, output_axes)
         )
         mansikka_output_node.set_tensor(new_tensor)
 
-        if (len(contraction_ids)>=1):
-            print("@@@@@@@@@@@tensor@@@@@@@@@@@@@@@")
-            print(new_tensor)
-            print("@@matrix@@")
-            print(pyzxtensor.tensor_to_matrix(new_tensor, 2, 2))
-            print("@@@@@@@@@@@@@@@@@@@@@@@@@@")
-
-        # update node edges
+        # update output node
         mansikka_output_node.update_edges(mansikka_input_node)
 
-        # remove the node
+        # remove the  input node
         mansikka_node_map.pop(edge["inp"])
         print("# remaining nodes#")
         print(" \nnodes:{} \n".format(mansikka_node_map.keys()))
 
         # update the edge_list
         # remove contracted edges
-        print("deprecate edges:", edge_id_and)
         for deprecate_edge_id in edge_id_and:
             if deprecate_edge_id in contraction_ids:
                 contraction_ids.remove(deprecate_edge_id)
                 mansikka_edge_map.pop(deprecate_edge_id)
 
-        print("\n##updated edge list##")
-        print("update contraction order:", contraction_ids)
-        print("update edge list:", mansikka_edge_map)
-        print("######################")
+        # permute the output node
+        unordered_input = []
+        unordered_output = []
+        for lat_id in mansikka_output_node.edge_ids:
+            if mansikka_edge_map[lat_id]["inp"] == mansikka_output_node.index:
+                unordered_input.append(lat_id)
+            else:
+                unordered_output.append(lat_id)
+
+        edgelist=mansikka_edge_map
+        unordered_input =sorted(unordered_input, key=lambda edg : edg / 999 + edgelist[edg]["inp"] + edgelist[edg]["out"])
+        unordered_output = sorted(unordered_output,
+                                 key=lambda edg: edg / 999 + edgelist[edg]["inp"] + edgelist[edg]["out"])
+        unordered_input.extend(unordered_output)
+        #unordered_output.extend(unordered_input)
+        ordered_edges = unordered_input
+        print("edge order")
+        for e in ordered_edges:
+            print(edgelist[e])
+
+        permut = [mansikka_output_node.edge_ids.index(e) for e in ordered_edges]
+        new_tensor =mansikka_output_node.tensor.transpose(permut)
+        mansikka_output_node.set_tensor(new_tensor)
+        new_edge_order=ordered_edges#[mansikka_output_node.edge_ids[i]for i in permut]
+        mansikka_output_node.edge_ids=new_edge_order
+
+
 
     print("####\n Remaining edges:{} \n \n####".format(contraction_ids))
     print("\n ###### final nodes:{}\n#### ".format(mansikka_node_map))
@@ -171,14 +182,6 @@ def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = Tr
         tensor = mansikka_node_map[node].tensor
         break
 
-    perm = []
-    for i in range(2 * len(pyzx_graph.inputs())):
-        perm.append(len(pyzx_graph.inputs())-i-1)
-        # perm=[3,2,1,0]
-    tensor = np.transpose(tensor, perm)
-
-
-    print("tensor:", tensor)
     if preserve_scalar:
         tensor *= pyzx_graph.scalar.to_number()
 
@@ -272,3 +275,6 @@ def get_tensor_from_g(pyzx_graph, v):
 def print_edgelist(edgelist):
     el = [(edgelist[k]["inp"], edgelist[k]["out"]) for k in edgelist.keys()]
     print("edgelist:", el)
+
+
+

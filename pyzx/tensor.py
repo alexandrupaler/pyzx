@@ -153,6 +153,9 @@ def tensorfy(g: "BaseGraph[VT,ET]", preserve_scalar: bool = True) -> np.ndarray:
     for i in range(qubits):
         tensor = np.tensordot(tensor, id2, axes=0)
 
+    print("7777tensor\n:",tensor)
+    print("inp tensor: \n", tensor_to_matrix(tensor, len(inputs), len(outputs)))
+
     inputs = tuple(sorted(inputs, key=g.qubit))
     print("### \n inputs_1 :{} \n###".format(inputs))
 
@@ -269,9 +272,17 @@ def tensorfy(g: "BaseGraph[VT,ET]", preserve_scalar: bool = True) -> np.ndarray:
                 if np.abs(tensor).max() < 10**-6:  # Values are becoming too small
                     tensor *= 10**4  # So scale all the numbers up
 
+
+
+
+
+
+
     if preserve_scalar:
         tensor *= g.scalar.to_number()
 
+    print("base tensor 0 permut: ", tensor)
+    print("base tensor_mat 0 permut: \n", tensor_to_matrix(tensor, len(inputs),len(outputs)))
     perm = []
     for o in sorted(outputs, key=g.qubit):
         assert len(uncontracted_indices[o]) == 1
