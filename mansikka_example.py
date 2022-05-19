@@ -14,8 +14,8 @@ baseline_pipeline = McSimPipeline(name="baseline")
 mansikka_extractor = MansikkaExtractor(params={"m": 2, "nr_iter": 6})
 mansikka_pipeline = McSimPipeline(name="mansikka", extractor=mansikka_extractor)
 
-qubits = 2
-depth = 3
+qubits = 7
+depth = 29
 
 # Force seed
 random.seed(1)
@@ -33,6 +33,12 @@ print("Baseline matrix \n", matrix_0)
 print("        Mansikka\n", matrix_1)
 print("Equals:         \n", np.equal(matrix_0, matrix_1))
 
+s=0
+for i in range(len(matrix_0)):
+    for j in range(len(matrix_0)):
+        s=s+(matrix_0[i][j]-matrix_1[i][j])**2
+
+print("Dif:",s)
 # for state in range(2**qubits):
 #     print("##########\n state:{} #######".format(state))
 #     initial_state = np.zeros((2 ** qubits,))
@@ -54,7 +60,6 @@ print("\n\n Mansikka Done !")
 
 def test_trewidth(circuit):
     zx_graph = circuit.to_graph()
-    print("@@@@@@@@")
     pyzx.draw_matplotlib(zx_graph, labels=True, figsize=(8, 2), h_edge_draw='blue', show_scalar=False, rows=None).savefig("circuit.png")
 
     example_graph = MansikkaGraph([k for k in zx_graph.vertices()], zx_graph.edge_set().copy())

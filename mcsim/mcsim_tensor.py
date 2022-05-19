@@ -58,6 +58,10 @@ def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = Tr
 
         ## Stop
         if len(contraction_ids)==pyzx_graph.num_outputs()+pyzx_graph.num_inputs():
+            if (len(mansikka_node_map.keys()) > pyzx_graph.num_outputs()+pyzx_graph.num_inputs()+1):
+                raise Exception(
+                    "Circuit is not conected!")
+                return 1
             tensor=mansikka_output_node.tensor
             if preserve_scalar:
                 tensor *= pyzx_graph.scalar.to_number()
