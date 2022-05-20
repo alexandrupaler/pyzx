@@ -158,9 +158,9 @@ def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = Tr
                 unordered_output.append(lat_id)
 
         edgelist=mansikka_edge_map
-        unordered_input =sorted(unordered_input, key=lambda edg : edg / pyzx_graph.num_vertices  + edgelist[edg]["inp"] + edgelist[edg]["out"])
+        unordered_input =sorted(unordered_input, key=lambda edg : edg / pyzx_graph.num_vertices()  + edgelist[edg]["inp"] + edgelist[edg]["out"])
         unordered_output = sorted(unordered_output,
-                                 key=lambda edg: edg / pyzx_graph.num_vertices + edgelist[edg]["inp"] + edgelist[edg]["out"])
+                                 key=lambda edg: edg / pyzx_graph.num_vertices() + edgelist[edg]["inp"] + edgelist[edg]["out"])
         unordered_input.extend(unordered_output)
 
         #unordered_output.extend(unordered_input)
