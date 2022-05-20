@@ -1,4 +1,7 @@
 import math
+
+import numpy
+
 try:
     import cupy as np
 except:
@@ -17,7 +20,7 @@ def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = Tr
     """
 
     print(
-        "\n############################################## msc tensorfy ##############################################"
+        "\n################## msc tensorfy ####################"
     )
 
     # Hadamard gate tensor will be used for the Hadamard edges.
@@ -25,6 +28,30 @@ def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = Tr
 
     # Dictionaries with the nodes and edges in the graph.
     mansikka_node_map, mansikka_edge_map = get_nodes_edges(pyzx_graph)
+
+    # Eliminate H edges:
+    for edge_key in mansikka_edge_map:
+        edge = mansikka_edge_map[edge_key]
+        if edge["type"] == 2: # hadamard
+            had_tensor = 1 / np.sqrt(2) * np.array([[1, 1], [1, -1]])#--0--H--1
+            if edge["inp"] not in pyzx_graph.inputs():
+                new_tensor = numpy.tensordot(mansikka_node_map[edge["inp"]].tensor,had_tensor, axes=([mansikka_node_map[edge["inp"]].edge_ids.index(edge_key)],[0]))
+                new_edge_order = mansikka_node_map[edge["inp"]].edge_ids
+                new_edge_order.remove(edge_key)
+                new_edge_order.append(edge_key)
+                transposition_order =[mansikka_node_map[edge["inp"]].edge_ids.index(k) for k in new_edge_order ]
+                new_tensor = new_tensor.transpose(transposition_order)
+                mansikka_node_map[edge["inp"]].set_tensor(new_tensor)
+            else :
+                new_tensor = numpy.tensordot(had_tensor, mansikka_node_map[edge["out"]].tensor, axes=([1],[mansikka_node_map[edge["out"]].edge_ids.index(edge_key)]))
+                new_edge_order = mansikka_node_map[edge["out"]].edge_ids
+                new_edge_order.remove(edge_key)
+                new_edge_order.insert(0,edge_key)
+                transposition_order = [mansikka_node_map[edge["out"]].edge_ids.index(k) for k in new_edge_order]
+                new_tensor = new_tensor.transpose(transposition_order)
+                mansikka_node_map[edge["out"]].set_tensor(new_tensor)
+
+
     nr_vert = pyzx_graph.num_vertices()
 
     reorder_contraction_edge_list(contraction_edge_list, nr_vert, pyzx_graph)
