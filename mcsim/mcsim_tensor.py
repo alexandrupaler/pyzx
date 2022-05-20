@@ -16,9 +16,13 @@ def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = Tr
 
     """
 
-    print(
-        "\n############################################## msc tensorfy ##############################################"
-    )
+    # TODO: Alexandru, determine if more than one connected component in the graph
+    number_components = 1
+    if number_components > 1:
+        raise Exception("Circuit is not conected!")
+        # return 1
+
+    print("\n##################### msc tensorfy ##########################")
 
     # Hadamard gate tensor will be used for the Hadamard edges.
     had = 1 / math.sqrt(2) * np.array([[1, 1], [1, -1]])
@@ -38,11 +42,10 @@ def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = Tr
     print("graph edge_list :", mansikka_edge_map)
     print("contraction_order 0:", contraction_ids)
 
-
-
-
     #
-    while len(contraction_ids) > 0:
+    # Do not contract edges connecting to input and output nodes
+    nr_do_not_contract = pyzx_graph.num_outputs()+pyzx_graph.num_inputs()
+    while len(contraction_ids) > nr_do_not_contract:
 
         print("\n## contraction_edge in named_contraction_order ##\n")
 
@@ -56,85 +59,25 @@ def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = Tr
         print("## input:{} | output:{}".format(edge["inp"], edge["out"]))
 
 
-        ## Stop
-        if len(contraction_ids)==pyzx_graph.num_outputs()+pyzx_graph.num_inputs():
-            if (len(mansikka_node_map.keys()) > pyzx_graph.num_outputs()+pyzx_graph.num_inputs()+1):
-                raise Exception(
-                    "Circuit is not conected!")
-                return 1
-            tensor=mansikka_output_node.tensor
-            if preserve_scalar:
-                tensor *= pyzx_graph.scalar.to_number()
-
-            return tensor
-        ##
-
-
         input_axes = [] # contraction axes for the input node.
         output_axes = [] # contraction axes for the output node.
 
-
         edge_id_and, edge_id_xor = mansikka_output_node.edge_set_and_xor(mansikka_input_node)
 
-
+        # These are the axes that will be removed
         for edgex in edge_id_and:
             if mansikka_edge_map[edgex]["inp"] in pyzx_graph.inputs():
                 input_axes.append(1)  # 1
             else:
                 input_axes.append(mansikka_input_node.edge_ids.index(edgex))
-
             output_axes.append(mansikka_output_node.edge_ids.index(edgex))
 
-
-
+        # For remaining edges, update the end points
         for edgex in edge_id_xor:
             if mansikka_edge_map[edgex]["inp"] == edge["inp"]:
                 mansikka_edge_map[edgex]["inp"] = edge["out"]
             if mansikka_edge_map[edgex]["out"] == edge["inp"]:
                 mansikka_edge_map[edgex]["out"] = edge["out"]
-
-#######################################################################################################
-        # # treat the Hadamard edges
-        # # need to be verrified
-        # for c_e in edge_id_and:
-        #     print("#### Treat Hadamard edges ####")
-        #     if mansikka_edge_map[c_e]["type"] == EdgeType.HADAMARD:
-        #         # get the contraction axes in input tensor
-        #         print("mansfikka_input_node.edge_ids:",mansikka_input_node.edge_ids)
-        #         inp_axis_connected_with_had = [mansikka_input_node.edge_ids.index(c_e)]
-        #         # contract with the hadamard and update the input tensor
-        #         new_tensor = np.tensordot(
-        #             mansikka_input_node.tensor,had, axes=(inp_axis_connected_with_had,[1] )
-        #         )
-        #         mansikka_input_node.set_tensor(new_tensor)
-        #
-        #         # remove contracted edge and add it again at the right place
-        #         print("#### input node edges before H:", mansikka_input_node.edge_ids)
-        #         mansikka_input_node.edge_ids.remove(c_e)
-        #         mansikka_input_node.edge_ids.insert(0,c_e)#append(c_e)
-        #         print("#### input node edges after H:", mansikka_input_node.edge_ids)
-        #
-        #         # recalculate contraction axes for the modified tensor
-        #         print("#### recalculate input axes ")
-        #         input_axes = []
-        #         for i, inp_edge in enumerate(mansikka_input_node.edge_ids):
-        #             print("## edge_axes in input:{}\nedge:{}".format(i, inp_edge))
-        #             if inp_edge in mansikka_output_node.edge_ids:
-        #                 input_axes.append(i)
-# ######################################################################################################
-
-
-        print("\n##!!calculate new tensor!!##")
-
-
-        print("ni:{}|no{}".format(input_axes,output_axes))
-        new_tensor = np.tensordot(
-             mansikka_input_node.tensor,mansikka_output_node.tensor, axes=(input_axes, output_axes)
-        )
-        mansikka_output_node.set_tensor(new_tensor)
-
-        # update output node
-        mansikka_output_node.update_edges(mansikka_input_node)
 
         # remove the  input node
         mansikka_node_map.pop(edge["inp"])
@@ -148,54 +91,24 @@ def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = Tr
                 contraction_ids.remove(deprecate_edge_id)
                 mansikka_edge_map.pop(deprecate_edge_id)
 
-        # permute the output node
-        unordered_input = []
-        unordered_output = []
-        for lat_id in mansikka_output_node.edge_ids:
-            if mansikka_edge_map[lat_id]["inp"] == mansikka_output_node.index:
-                unordered_input.append(lat_id)
-            else:
-                unordered_output.append(lat_id)
+        print("\n##!!calculate new tensor!!##")
 
-        edgelist=mansikka_edge_map
-        unordered_input =sorted(unordered_input, key=lambda edg : edg / pyzx_graph.num_vertices()  + edgelist[edg]["inp"] + edgelist[edg]["out"])
-        unordered_output = sorted(unordered_output,
-                                 key=lambda edg: edg / pyzx_graph.num_vertices() + edgelist[edg]["inp"] + edgelist[edg]["out"])
-        unordered_input.extend(unordered_output)
-
-        # unordered_output.extend(unordered_input)
-        ordered_edges = unordered_input
-        # print("edge order")
-        # for e in ordered_edges:
-        #     print(edgelist[e])
-
-        permut = [mansikka_output_node.edge_ids.index(e) for e in ordered_edges]
-        new_tensor =mansikka_output_node.tensor.transpose(permut)
+        print("ni:{}|no{}".format(input_axes, output_axes))
+        new_tensor = np.tensordot(
+             mansikka_input_node.tensor,mansikka_output_node.tensor, axes=(input_axes, output_axes)
+        )
         mansikka_output_node.set_tensor(new_tensor)
-        new_edge_order=ordered_edges#[mansikka_output_node.edge_ids[i]for i in permut]
-        mansikka_output_node.edge_ids=new_edge_order
 
+        # update output node
+        mansikka_output_node.update_edges_in_tensor(mansikka_input_node, mansikka_edge_map)
 
-    #
-    # print("####\n Remaining edges:{} \n \n####".format(contraction_ids))
-    # print("\n ###### final nodes:{}\n#### ".format(mansikka_node_map))
-    #
-    # if (len(mansikka_node_map.keys())>1):
-    #     raise Exception("You have more than one final node. This means that you can treat your circuit as two separate circuits!")
-    #     return 1
-    #
-    # for node in mansikka_node_map:
-    #     tensor = mansikka_node_map[node].tensor
-    #     break
-    #
-    # if preserve_scalar:
-    #     tensor *= pyzx_graph.scalar.to_number()
-    #
-    # # print("tensor shape:", tensor.shape)
-    # # print("final tensor:", tensor)
-    # # print("final mat:", pyzxtensor.tensor_to_matrix(tensor, 2, 2))
-    #
-    # return tensor
+    # TODO: Is this up to date from the while?
+    tensor = mansikka_output_node.tensor
+    if preserve_scalar:
+        tensor *= pyzx_graph.scalar.to_number()
+
+    return tensor
+
 
 
 def reorder_contraction_edge_list(contraction_edge_list, nr_vert, pyzx_graph):
@@ -284,3 +197,32 @@ def print_edgelist(edgelist):
 
 
 
+#######################################################################################################
+        # # treat the Hadamard edges
+        # # need to be verrified
+        # for c_e in edge_id_and:
+        #     print("#### Treat Hadamard edges ####")
+        #     if mansikka_edge_map[c_e]["type"] == EdgeType.HADAMARD:
+        #         # get the contraction axes in input tensor
+        #         print("mansfikka_input_node.edge_ids:",mansikka_input_node.edge_ids)
+        #         inp_axis_connected_with_had = [mansikka_input_node.edge_ids.index(c_e)]
+        #         # contract with the hadamard and update the input tensor
+        #         new_tensor = np.tensordot(
+        #             mansikka_input_node.tensor,had, axes=(inp_axis_connected_with_had,[1] )
+        #         )
+        #         mansikka_input_node.set_tensor(new_tensor)
+        #
+        #         # remove contracted edge and add it again at the right place
+        #         print("#### input node edges before H:", mansikka_input_node.edge_ids)
+        #         mansikka_input_node.edge_ids.remove(c_e)
+        #         mansikka_input_node.edge_ids.insert(0,c_e)#append(c_e)
+        #         print("#### input node edges after H:", mansikka_input_node.edge_ids)
+        #
+        #         # recalculate contraction axes for the modified tensor
+        #         print("#### recalculate input axes ")
+        #         input_axes = []
+        #         for i, inp_edge in enumerate(mansikka_input_node.edge_ids):
+        #             print("## edge_axes in input:{}\nedge:{}".format(i, inp_edge))
+        #             if inp_edge in mansikka_output_node.edge_ids:
+        #                 input_axes.append(i)
+# ######################################################################################################

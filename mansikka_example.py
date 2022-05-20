@@ -21,7 +21,7 @@ depth = 10
 random.seed(1)
 circuit = pyzx.generate.CNOT_HAD_PHASE_circuit(qubits, depth, p_had=0.00, clifford=True)
 # Visualising the circuit
-pyzx.draw_matplotlib(circuit.to_graph(), labels=True, figsize=(8, 4), h_edge_draw='blue', show_scalar=False, rows=None).savefig("circuit_0.png")
+# pyzx.draw_matplotlib(circuit.to_graph(), labels=True, figsize=(8, 4), h_edge_draw='blue', show_scalar=False, rows=None).savefig("circuit_0.png")
 
 baseline_circ, baseline_graph = baseline_pipeline.load(circuit)
 matrix_0 = baseline_pipeline.extract(baseline_graph)
@@ -58,7 +58,7 @@ print("\n\n Mansikka Done !")
 
 #####################################################
 
-def test_trewidth(circuit):
+def test_treewidth(circuit):
     zx_graph = circuit.to_graph()
     pyzx.draw_matplotlib(zx_graph, labels=True, figsize=(8, 2), h_edge_draw='blue', show_scalar=False, rows=None).savefig("circuit.png")
 
