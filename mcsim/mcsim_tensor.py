@@ -38,7 +38,9 @@ def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = Tr
     # print("graph edge_list :", mansikka_edge_map)
     # print("contraction_order 0:", contraction_ids)
 
-    # TODO : Check if it's a compact circuit
+    # TODO  Alexandru: Check if it's a compact circuit
+    
+
 
     # Do not contract edges  connecting to input and output nodes
     nr_do_not_contract = pyzx_graph.num_outputs() + pyzx_graph.num_inputs()

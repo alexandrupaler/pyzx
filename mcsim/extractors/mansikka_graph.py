@@ -9,6 +9,7 @@
 
 import copy
 
+
 class MansikkaGraph:
 
     def __init__(self, vertices, edges):
@@ -49,7 +50,6 @@ class MansikkaGraph:
 
         return MansikkaGraph(dual_vert, dual_edges)
 
-
     def find_treewidth_from_order(self, elimination_order):
 
         # Work on a copy
@@ -78,9 +78,8 @@ class MansikkaGraph:
 
         return treewidth
 
-
     def greedy_treewidth_deletion(
-        self, elimination_order, nr_tensors_to_rem, option=False, direct_minimization=False
+            self, elimination_order, nr_tensors_to_rem, option=False, direct_minimization=False
     ):
         """
         Args:
@@ -127,7 +126,6 @@ class MansikkaGraph:
 
         return new_graph, new_order, tw, removed_vertices
 
-
     def removal_recommendation(self, order=None):
         # this will be updated to betweenness centrality
 
@@ -143,7 +141,6 @@ class MansikkaGraph:
                 nr_neighbors = nr_nb
 
         return recommendation
-
 
     def direct_treewidth_minimization(self, elimination_order):
 
@@ -180,7 +177,6 @@ class MansikkaGraph:
                 recommendation = u
 
         return recommendation
-
 
     def tree_decomposition(self):
         """
