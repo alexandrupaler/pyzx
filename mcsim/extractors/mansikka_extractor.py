@@ -20,18 +20,18 @@ class MansikkaExtractor(BaseExtractor):
         :return: graph matrix
         """
 
-        print("graph_ edges:", graph.edge_set())
+        # print("graph_ edges:", graph.edge_set())
         working_graph = MansikkaGraph([k for k in graph.vertices()], graph.edge_set().copy())
         working_graph = working_graph.construct_dual()
-        print("dual vert:", working_graph.vertices)
-        print("dual edges: ", working_graph.edges)
+        # print("dual vert:", working_graph.vertices)
+        # print("dual edges: ", working_graph.edges)
 
         contraction_order = get_contraction_order(
             working_graph, self.params["m"], self.params["nr_iter"]
         )
-        print("contraction order: ", contraction_order)
-
-        print("Ok here !!")
+        # print("contraction order: ", contraction_order)
+        #
+        # print("Ok here !!")
 
         # return graph.to_matrix()
         return graph.to_matrix(

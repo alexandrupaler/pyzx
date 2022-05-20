@@ -18,12 +18,12 @@ baseline_pipeline = McSimPipeline(name="baseline")
 mansikka_extractor = MansikkaExtractor(params={"m": 2, "nr_iter": 6})
 mansikka_pipeline = McSimPipeline(name="mansikka", extractor=mansikka_extractor)
 
-qubits = 3
-depth = 20
+qubits = 7
+depth = 80
 
 # Force seed
 random.seed(1)
-circuit = pyzx.generate.CNOT_HAD_PHASE_circuit(qubits, depth, p_had=0.7, clifford=True)
+circuit = pyzx.generate.CNOT_HAD_PHASE_circuit(qubits, depth, p_had=0.3, clifford=True)
 
 
 # Visualising the circuit
@@ -44,12 +44,24 @@ s = 0
 for i in range(len(matrix_0)):
     for j in range(len(matrix_0)):
         s = s + (abs(matrix_0[i][j] - matrix_1[i][j])) ** 2
-
 print("Dif:", s)
 
 print("\n\n Mansikka Done !")
 
 
+
+print("## Time performace##:\n")
+
+initial_state = np.zeros((2 ** qubits,), dtype=np.complex64)
+initial_state[0] = 1
+
+result = baseline_pipeline.evaluate_with_mcsim(initial_state, baseline_graph)
+print("\n ####baseline:####\n", baseline_pipeline.timing)
+
+result = mansikka_pipeline.evaluate_with_mcsim(initial_state, mansikka_graph)
+print("\n ####mansika:####\n", mansikka_pipeline.timing)
+
+print("\n\n ## -Mansika performance- ##!")
 #####################################################
 
 def test_treewidth(quantum_circuit):
