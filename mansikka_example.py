@@ -1,5 +1,10 @@
 import random
-import numpy as np
+try:
+    import cupy as np
+    print("CUPY0!")
+except:
+    import numpy as np
+    np.set_printoptions(suppress=True)
 import pyzx
 
 from mcsim import McSimPipeline
