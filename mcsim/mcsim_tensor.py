@@ -94,32 +94,33 @@ def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = Tr
                 mansikka_edge_map[edgex]["out"] = edge["out"]
 
 #######################################################################################################
-#         # treat the Hadamard edges
-#         # need to be verrified
-#         for c_e in joint_edges:
-#             print("#### Treat Hadamard edges ####")
-#             if edge_list[c_e]["type"] == EdgeType.HADAMARD:
-#                 # get the contraction axes in input tensor
-#                 inp_axis_connected_with_had = [input_node.edges.index(c_e)]
-#                 # contract with the hadamard and update the input tensor
-#                 new_tensor = np.tensordot(
-#                     input_node.tensor,had, axes=(inp_axis_connected_with_had,[1] )
-#                 )
-#                 input_node.set_tensor(new_tensor)
-#
-#                 # remove contracted edge and add it again at the right place
-#                 print("#### input node edges before H:", input_node.edges)
-#                 input_node.edges.remove(c_e)
-#                 input_node.edges.insert(0,c_e)#append(c_e)
-#                 print("#### input node edges after H:", input_node.edges)
-#
-#                 # recalculate contraction axes for the modified tensor
-#                 print("#### recalculate input axes ")
-#                 ni_axes = []
-#                 for i, inp_edge in enumerate(input_node.edges):
-#                     print("## edge_axes in input:{}\nedge:{}".format(i, inp_edge))
-#                     if inp_edge in output_node.edges:
-#                         ni_axes.append(i)
+        # # treat the Hadamard edges
+        # # need to be verrified
+        # for c_e in edge_id_and:
+        #     print("#### Treat Hadamard edges ####")
+        #     if mansikka_edge_map[c_e]["type"] == EdgeType.HADAMARD:
+        #         # get the contraction axes in input tensor
+        #         print("mansfikka_input_node.edge_ids:",mansikka_input_node.edge_ids)
+        #         inp_axis_connected_with_had = [mansikka_input_node.edge_ids.index(c_e)]
+        #         # contract with the hadamard and update the input tensor
+        #         new_tensor = np.tensordot(
+        #             mansikka_input_node.tensor,had, axes=(inp_axis_connected_with_had,[1] )
+        #         )
+        #         mansikka_input_node.set_tensor(new_tensor)
+        #
+        #         # remove contracted edge and add it again at the right place
+        #         print("#### input node edges before H:", mansikka_input_node.edge_ids)
+        #         mansikka_input_node.edge_ids.remove(c_e)
+        #         mansikka_input_node.edge_ids.insert(0,c_e)#append(c_e)
+        #         print("#### input node edges after H:", mansikka_input_node.edge_ids)
+        #
+        #         # recalculate contraction axes for the modified tensor
+        #         print("#### recalculate input axes ")
+        #         input_axes = []
+        #         for i, inp_edge in enumerate(mansikka_input_node.edge_ids):
+        #             print("## edge_axes in input:{}\nedge:{}".format(i, inp_edge))
+        #             if inp_edge in mansikka_output_node.edge_ids:
+        #                 input_axes.append(i)
 # ######################################################################################################
 
 
@@ -157,10 +158,11 @@ def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = Tr
                 unordered_output.append(lat_id)
 
         edgelist=mansikka_edge_map
-        unordered_input =sorted(unordered_input, key=lambda edg : edg / 999 + edgelist[edg]["inp"] + edgelist[edg]["out"])
+        unordered_input =sorted(unordered_input, key=lambda edg : edg / pyzx_graph.num_vertices  + edgelist[edg]["inp"] + edgelist[edg]["out"])
         unordered_output = sorted(unordered_output,
-                                 key=lambda edg: edg / 999 + edgelist[edg]["inp"] + edgelist[edg]["out"])
+                                 key=lambda edg: edg / pyzx_graph.num_vertices + edgelist[edg]["inp"] + edgelist[edg]["out"])
         unordered_input.extend(unordered_output)
+
         #unordered_output.extend(unordered_input)
         ordered_edges = unordered_input
         print("edge order")

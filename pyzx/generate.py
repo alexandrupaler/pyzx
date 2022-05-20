@@ -102,7 +102,7 @@ def spider(
 def CNOT_HAD_PHASE_circuit(
     qubits: int,
     depth: int,
-    p_had: float = 0.0,
+    p_had: float = 0.5,
     p_t: float = 0.2,
     clifford: bool = False,
 ) -> Circuit:
@@ -424,7 +424,7 @@ def cliffords(
     p_two_qubit = 0.4  # whether to add a edge between two qubits
     p_cnot = 1  # 0.4 # whether to CNOT or to CZ
     p_phase = 0.6  # probability of adding a phase to a node
-    p_had = 0.0  # probability of adding a hadamard on a qubit
+    p_had = 0.02 # probability of adding a hadamard on a qubit
 
     # initialise and add input row
 

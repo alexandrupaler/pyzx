@@ -63,7 +63,7 @@ def Z_to_tensor(arity: int, phase: float) -> np.ndarray:
     m[(0,) * arity] = 1
     m[(1,) * arity] = np.exp(1j * phase)
 
-    print("Ztensor:", m)
+    # print("Ztensor:", m)
     return m
 
 
@@ -78,7 +78,7 @@ def X_to_tensor(arity: int, phase: float) -> np.ndarray:
         else:
             m[i] -= np.exp(1j * phase)
 
-    print("Xtensor:", np.power(np.sqrt(0.5), arity) * m.reshape([2] * arity))
+    # print("Xtensor:", np.power(np.sqrt(0.5), arity) * m.reshape([2] * arity))
     return np.power(np.sqrt(0.5), arity) * m.reshape([2] * arity)
 
 
@@ -132,10 +132,10 @@ def tensorfy(g: "BaseGraph[VT,ET]", preserve_scalar: bool = True) -> np.ndarray:
         else:
             verts_row[curr_row] = [v]
 
-    print("### \n verts row :{} \n###".format(verts_row))
+    # print("### \n verts row :{} \n###".format(verts_row))
 
     inputs = g.inputs()
-    print("### \n inputs_0 :{} \n###".format(inputs))
+    # print("### \n inputs_0 :{} \n###".format(inputs))
 
     outputs = g.outputs()
     if not inputs and not outputs:
@@ -153,22 +153,22 @@ def tensorfy(g: "BaseGraph[VT,ET]", preserve_scalar: bool = True) -> np.ndarray:
     for i in range(qubits):
         tensor = np.tensordot(tensor, id2, axes=0)
 
-    print("7777tensor\n:",tensor)
-    print("inp tensor: \n", tensor_to_matrix(tensor, len(inputs), len(outputs)))
+    # print("7777tensor\n:",tensor)
+    # print("inp tensor: \n", tensor_to_matrix(tensor, len(inputs), len(outputs)))
 
     inputs = tuple(sorted(inputs, key=g.qubit))
-    print("### \n inputs_1 :{} \n###".format(inputs))
+    # print("### \n inputs_1 :{} \n###".format(inputs))
 
     indices = {}
 
     inputs = sorted(inputs, key=g.qubit)
-    print("### \n inputs_2 :{} \n###".format(inputs))
+    # print("### \n inputs_2 :{} \n###".format(inputs))
 
     uncontracted_indices = {}
 
     for i, v in enumerate(inputs):
         uncontracted_indices[v] = [1 + 2 * i]  # why +2*i
-    print("### \n uncontracted_indices_0 :{} \n###".format(uncontracted_indices))
+    # print("### \n uncontracted_indices_0 :{} \n###".format(uncontracted_indices))
 
     for i, curr_row in enumerate(sorted(verts_row.keys())):
         # ->row
@@ -220,7 +220,7 @@ def tensorfy(g: "BaseGraph[VT,ET]", preserve_scalar: bool = True) -> np.ndarray:
             )
 
             edge_type = {n: g.edge_type(g.edge(v, n)) for n in past_vertices}
-            print("###\n current_vert={} \n edge_types: {} \n###".format(v, edge_type))
+            # print("###\n current_vert={} \n edge_types: {} \n###".format(v, edge_type))
 
             past_vertices.sort(key=lambda n: edge_type[n])
             print(
@@ -239,25 +239,26 @@ def tensorfy(g: "BaseGraph[VT,ET]", preserve_scalar: bool = True) -> np.ndarray:
             # the last indices in idx_contr_past correspond to hadamard contractions
             # These are the indices in the total tensor that will be contracted
 
-            print(
-                "\n###\n past vertices : {} \n current vertice:{}\n uncontracted indices:{} ".format(
-                    past_vertices, v, uncontracted_indices
-                )
-            )
+            # print(
+            #     "\n###\n past vertices : {} \n current vertice:{}\n uncontracted indices:{} ".format(
+            #         past_vertices, v, uncontracted_indices
+            #     )
+            # )
+
             idx_contr_past = pop_and_shift_uncontracted_indices(
                 past_vertices, uncontracted_indices
             )
-            print("idx_contr_past 0:{} \n###".format(idx_contr_past))
+            #print("idx_contr_past 0:{} \n###".format(idx_contr_past))
 
             # The last axes in the tensor t are the one that will be contracted
             idx_contr_curr = list(
                 range(len(t.shape) - len(idx_contr_past), len(t.shape))
             )
-            print(
-                "###\nindx_contr_past 001:{} \n idx_contr_curr{} \n###".format(
-                    idx_contr_past, idx_contr_curr
-                )
-            )
+            # print(
+            #     "###\nindx_contr_past 001:{} \n idx_contr_curr{} \n###".format(
+            #         idx_contr_past, idx_contr_curr
+            #     )
+            # )
 
             tensor = np.tensordot(tensor, t, axes=(idx_contr_past, idx_contr_curr))
 
@@ -281,8 +282,8 @@ def tensorfy(g: "BaseGraph[VT,ET]", preserve_scalar: bool = True) -> np.ndarray:
     if preserve_scalar:
         tensor *= g.scalar.to_number()
 
-    print("base tensor 0 permut: ", tensor)
-    print("base tensor_mat 0 permut: \n", tensor_to_matrix(tensor, len(inputs),len(outputs)))
+    # print("base tensor 0 permut: ", tensor)
+    # print("base tensor_mat 0 permut: \n", tensor_to_matrix(tensor, len(inputs),len(outputs)))
     perm = []
     for o in sorted(outputs, key=g.qubit):
         assert len(uncontracted_indices[o]) == 1
@@ -290,7 +291,7 @@ def tensorfy(g: "BaseGraph[VT,ET]", preserve_scalar: bool = True) -> np.ndarray:
     for i in range(len(inputs)):
         perm.append(i)
 
-    print("$$: perm:",perm)
+    # print("$$: perm:",perm)
     tensor = np.transpose(tensor, perm)
 
     # Test that sparse works
@@ -298,10 +299,10 @@ def tensorfy(g: "BaseGraph[VT,ET]", preserve_scalar: bool = True) -> np.ndarray:
     # sparse_tensor = tensorfy_scipy(g, preserve_scalar)
     # assert (sparse_tensor == tensor)
 
-    print("@@ tensorfy @@")
-
-    print("tesnsor shape:", tensor.shape)
-    print("tensor:", tensor)
+    # print("@@ tensorfy @@")
+    #
+    # print("tesnsor shape:", tensor.shape)
+    # print("tensor:", tensor)
 
     return tensor
 
