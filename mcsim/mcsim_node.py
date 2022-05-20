@@ -2,6 +2,7 @@ import pyzx
 
 import mcsim
 
+
 class MansikkaNode:
     def __init__(self, v, pyzx_graph):
         self.index = v
@@ -23,7 +24,7 @@ class MansikkaNode:
     def update_edges_in_tensor(self, other_node, mansikka_edge_map):
         joint_edges, xor_edges = self.edge_set_and_xor(other_node)
 
-        # The order of edges after numpy.tensordot
+        # The order of edges after numpy tensor dot product
         n_edge_ids = []
         for e in other_node.edge_ids:
             if e not in joint_edges:
@@ -32,8 +33,6 @@ class MansikkaNode:
         for e in self.edge_ids:
             if e not in joint_edges:
                 n_edge_ids.append(e)
-
-
 
         # Sort the edges according to the transversal order of the contraction
         input_edges = []
@@ -44,10 +43,10 @@ class MansikkaNode:
             else:
                 output_edges.append(edge_id)
 
-        input_edges.sort(key=lambda edg: (mansikka_edge_map[edg]["inp"] , mansikka_edge_map[edg][
-                                     "out"], edg))
-        output_edges.sort(key=lambda edg: (mansikka_edge_map[edg]["inp"] , mansikka_edge_map[edg][
-                                     "out"], edg))
+        input_edges.sort(key=lambda edg: (mansikka_edge_map[edg]["inp"], mansikka_edge_map[edg][
+            "out"], edg))
+        output_edges.sort(key=lambda edg: (mansikka_edge_map[edg]["inp"], mansikka_edge_map[edg][
+            "out"], edg))
         input_edges.extend(output_edges)
 
         transposition_order = [n_edge_ids.index(e) for e in input_edges]
@@ -72,12 +71,11 @@ class MansikkaNode:
 
 
 def sort_edges(pyzx_graph, v):
-
     neighbors = sorted(pyzx_graph.neighbors(v))
-    edge_ids = [-1 for i in range(len(neighbors))]
+    edge_ids = [-1 for _ in range(len(neighbors))]
     for i, edge in enumerate(pyzx_graph.edges()):
         if v == edge[1]:
-            edge_ids[neighbors.index(edge[0])]=i
-        if v ==edge[0]:
+            edge_ids[neighbors.index(edge[0])] = i
+        if v == edge[0]:
             edge_ids[neighbors.index(edge[1])] = i
     return edge_ids

@@ -213,21 +213,21 @@ def tensorfy(g: "BaseGraph[VT,ET]", preserve_scalar: bool = True) -> np.ndarray:
                     neigh,
                 )
             )
-            print(
-                "###\n current_vert={} \n past vertices: {} \n###".format(
-                    v, past_vertices
-                )
-            )
+            # print(
+            #     "###\n current_vert={} \n past vertices: {} \n###".format(
+            #         v, past_vertices
+            #     )
+            # )
 
             edge_type = {n: g.edge_type(g.edge(v, n)) for n in past_vertices}
             # print("###\n current_vert={} \n edge_types: {} \n###".format(v, edge_type))
 
             past_vertices.sort(key=lambda n: edge_type[n])
-            print(
-                "###\n current_vert={} \n past_vertices_sorted: {} \n###".format(
-                    v, edge_type
-                )
-            )
+            # print(
+            #     "###\n current_vert={} \n past_vertices_sorted: {} \n###".format(
+            #         v, edge_type
+            #     )
+            # )
 
             for n in past_vertices:
                 if edge_type[n] == EdgeType.HADAMARD:
