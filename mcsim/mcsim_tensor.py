@@ -163,11 +163,11 @@ def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = Tr
                                  key=lambda edg: edg / pyzx_graph.num_vertices() + edgelist[edg]["inp"] + edgelist[edg]["out"])
         unordered_input.extend(unordered_output)
 
-        #unordered_output.extend(unordered_input)
+        # unordered_output.extend(unordered_input)
         ordered_edges = unordered_input
-        print("edge order")
-        for e in ordered_edges:
-            print(edgelist[e])
+        # print("edge order")
+        # for e in ordered_edges:
+        #     print(edgelist[e])
 
         permut = [mansikka_output_node.edge_ids.index(e) for e in ordered_edges]
         new_tensor =mansikka_output_node.tensor.transpose(permut)
@@ -176,26 +176,26 @@ def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = Tr
         mansikka_output_node.edge_ids=new_edge_order
 
 
-
-    print("####\n Remaining edges:{} \n \n####".format(contraction_ids))
-    print("\n ###### final nodes:{}\n#### ".format(mansikka_node_map))
-
-    if (len(mansikka_node_map.keys())>1):
-        raise Exception("You have more than one final node. This means that you can treat your circuit as two separate circuits!")
-        return 1
-
-    for node in mansikka_node_map:
-        tensor = mansikka_node_map[node].tensor
-        break
-
-    if preserve_scalar:
-        tensor *= pyzx_graph.scalar.to_number()
-
-    print("tensor shape:", tensor.shape)
-    print("final tensor:", tensor)
-    print("final mat:", pyzxtensor.tensor_to_matrix(tensor, 2, 2))
-
-    return tensor
+    #
+    # print("####\n Remaining edges:{} \n \n####".format(contraction_ids))
+    # print("\n ###### final nodes:{}\n#### ".format(mansikka_node_map))
+    #
+    # if (len(mansikka_node_map.keys())>1):
+    #     raise Exception("You have more than one final node. This means that you can treat your circuit as two separate circuits!")
+    #     return 1
+    #
+    # for node in mansikka_node_map:
+    #     tensor = mansikka_node_map[node].tensor
+    #     break
+    #
+    # if preserve_scalar:
+    #     tensor *= pyzx_graph.scalar.to_number()
+    #
+    # # print("tensor shape:", tensor.shape)
+    # # print("final tensor:", tensor)
+    # # print("final mat:", pyzxtensor.tensor_to_matrix(tensor, 2, 2))
+    #
+    # return tensor
 
 
 def reorder_contraction_edge_list(contraction_edge_list, nr_vert, pyzx_graph):
