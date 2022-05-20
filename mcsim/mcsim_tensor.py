@@ -3,9 +3,9 @@ import math
 
 try:
     import cupy as np
+    print("CUPY!")
 except:
     import numpy as np
-
     np.set_printoptions(suppress=True)
 
 from pyzx.utils import EdgeType
@@ -39,7 +39,7 @@ def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = Tr
     # print("contraction_order 0:", contraction_ids)
 
     # TODO  Alexandru: Check if it's a compact circuit
-    
+
 
 
     # Do not contract edges  connecting to input and output nodes
@@ -112,7 +112,7 @@ def convert_hadamard_edges(mansikka_edge_map, mansikka_node_map, pyzx_graph):
     for edge_key in mansikka_edge_map:
         edge = mansikka_edge_map[edge_key]
         if edge["type"] == EdgeType.HADAMARD:  # hadamard
-            mansikka_edge_map[edge_key]["type"] = 1
+            mansikka_edge_map[edge_key]["type"] = EdgeType.SIMPLE
             had_tensor = 1 / np.sqrt(2) * np.array([[1, 1], [1, -1]])  # --0--H--1--
             if edge["inp"] not in pyzx_graph.inputs():
                 new_tensor = np.tensordot(mansikka_node_map[edge["inp"]].tensor, had_tensor,
@@ -120,16 +120,16 @@ def convert_hadamard_edges(mansikka_edge_map, mansikka_node_map, pyzx_graph):
                 new_edge_order = mansikka_node_map[edge["inp"]].edge_ids
                 new_edge_order.remove(edge_key)
                 new_edge_order.append(edge_key)
-                transposition_order = [mansikka_node_map[edge["inp"]].edge_ids.index(k) for k in new_edge_order]
-                mansikka_node_map[edge["inp"]].set_tensor(new_tensor.transpose(transposition_order))
+                #transposition_order = [mansikka_node_map[edge["inp"]].edge_ids.index(k) for k in new_edge_order]
+                mansikka_node_map[edge["inp"]].set_tensor(new_tensor)
             else:
                 new_tensor = np.tensordot(had_tensor, mansikka_node_map[edge["out"]].tensor,
                                           axes=([1], [mansikka_node_map[edge["out"]].edge_ids.index(edge_key)]))
                 new_edge_order = mansikka_node_map[edge["out"]].edge_ids
                 new_edge_order.remove(edge_key)
                 new_edge_order.insert(0, edge_key)
-                transposition_order = [mansikka_node_map[edge["out"]].edge_ids.index(k) for k in new_edge_order]
-                mansikka_node_map[edge["out"]].set_tensor(new_tensor.transpose(transposition_order))
+                #transposition_order = [mansikka_node_map[edge["out"]].edge_ids.index(k) for k in new_edge_order]
+                mansikka_node_map[edge["out"]].set_tensor(new_tensor)
 
 
 def reorder_contraction_edge_list(contraction_edge_list, nr_vert, pyzx_graph):

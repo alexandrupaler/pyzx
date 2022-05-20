@@ -13,12 +13,14 @@ baseline_pipeline = McSimPipeline(name="baseline")
 mansikka_extractor = MansikkaExtractor(params={"m": 2, "nr_iter": 6})
 mansikka_pipeline = McSimPipeline(name="mansikka", extractor=mansikka_extractor)
 
-qubits = 7
-depth = 50
+qubits = 3
+depth = 20
 
 # Force seed
 random.seed(1)
-circuit = pyzx.generate.CNOT_HAD_PHASE_circuit(qubits, depth, p_had=0.5, clifford=True)
+circuit = pyzx.generate.CNOT_HAD_PHASE_circuit(qubits, depth, p_had=0.7, clifford=True)
+
+
 # Visualising the circuit
 pyzx.draw_matplotlib(circuit.to_graph(), labels=True, figsize=(8, 4), h_edge_draw='blue', show_scalar=False,
                      rows=None).savefig("circuit_0.png")
@@ -31,7 +33,7 @@ matrix_1 = mansikka_pipeline.extract(mansikka_graph)
 
 print("Baseline matrix \n", matrix_0)
 print("        Mansikka\n", matrix_1)
-print("Equals:         \n", np.equal(matrix_0, matrix_1))
+print("Equals:         \n", np.allclose(matrix_0, matrix_1))
 
 s = 0
 for i in range(len(matrix_0)):

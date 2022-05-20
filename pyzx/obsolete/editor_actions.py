@@ -20,11 +20,11 @@ from fractions import Fraction
 
 from typing import Callable, Optional, List, Tuple
 
-from .utils import EdgeType, VertexType, FractionLike
-from .utils import toggle_edge, vertex_is_zx, toggle_vertex
-from .graph.base import BaseGraph, VT, ET
-from . import rules
-from . import hrules
+from pyzx.utils import EdgeType, VertexType, FractionLike
+from pyzx.utils import toggle_edge, vertex_is_zx, toggle_vertex
+from pyzx.graph.base import BaseGraph, VT, ET
+from pyzx import rules
+from pyzx import hrules
 
 
 def match_X_spiders(

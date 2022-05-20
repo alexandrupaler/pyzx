@@ -24,13 +24,13 @@ from typing import Callable, Optional, List, Tuple, Set, Dict, Any, Union
 
 import pyperclip  # type: ignore # Needed for clipboard actions
 
-from .utils import EdgeType, VertexType, toggle_edge, vertex_is_zx, toggle_vertex
-from .utils import settings, phase_to_s, FloatInt
-from .drawing import matrix_to_latex
-from .graph import Scalar
-from .graph.graph import GraphS
-from . import rules
-from . import tikz
+from pyzx.utils import EdgeType, VertexType, toggle_edge, vertex_is_zx, toggle_vertex
+from pyzx.utils import settings, phase_to_s, FloatInt
+from pyzx.drawing import matrix_to_latex
+from pyzx.graph import Scalar
+from pyzx.graph.graph import GraphS
+from pyzx import rules
+from pyzx import tikz
 
 from .editor_actions import (
     MATCHES_VERTICES,

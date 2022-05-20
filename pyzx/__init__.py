@@ -44,7 +44,7 @@ from . import hsimplify
 from . import d3
 from . import tikz
 from . import simulate
-from . import editor
+# from pyzx.obsolete import editor
 from . import routing
 from . import local_search
 from .routing.parity_maps import CNOT_tracker

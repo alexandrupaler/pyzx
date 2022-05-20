@@ -1,0 +1,6 @@
+typing-extensions >= 3.7.4
+numpy >= 1.14
+matplotlib >= 2.2
+ipywidgets >= 7.5
+sphinx >= 2.3
+tqdm >= 4.56.0
