@@ -21,41 +21,38 @@ class MansikkaNode:
         self.tensor = tensor
 
     def update_edges_in_tensor(self, other_node, mansikka_edge_map):
-        common_edges, xor_edges = self.edge_set_and_xor(other_node)
+        joint_edges, xor_edges = self.edge_set_and_xor(other_node)
 
         # The order of edges after numpy.tensordot
         n_edge_ids = []
         for e in other_node.edge_ids:
-            if e not in common_edges:
+            if e not in joint_edges:
                 n_edge_ids.append(e)
 
         for e in self.edge_ids:
-            if e not in common_edges:
+            if e not in joint_edges:
                 n_edge_ids.append(e)
 
-        # Soprt the edges according to the traversal order of the contraction
+
+
+        # Sort the edges according to the transversal order of the contraction
         input_edges = []
         output_edges = []
-        for lat_id in n_edge_ids:
-            if mansikka_edge_map[lat_id]["inp"] == self.index:
-                input_edges.append(lat_id)
+        for edge_id in n_edge_ids:
+            if mansikka_edge_map[edge_id]["inp"] == self.index:
+                input_edges.append(edge_id)
             else:
-                output_edges.append(lat_id)
+                output_edges.append(edge_id)
 
-        input_edges.sort(key=lambda edg: (
-        mansikka_edge_map[edg]["inp"], mansikka_edge_map[edg]["out"], edg))
-        output_edges.sort(key=lambda edg: (
-        mansikka_edge_map[edg]["inp"], mansikka_edge_map[edg]["out"], edg))
+        input_edges.sort(key=lambda edg: (mansikka_edge_map[edg]["inp"] , mansikka_edge_map[edg][
+                                     "out"], edg))
+        output_edges.sort(key=lambda edg: (mansikka_edge_map[edg]["inp"] , mansikka_edge_map[edg][
+                                     "out"], edg))
+        input_edges.extend(output_edges)
 
-        self.edge_ids.clear()
-        self.edge_ids.extend(input_edges)
-        self.edge_ids.extend(output_edges)
-
-        # Things are now sorted. Transpose the tensor
-        transposition_order = [n_edge_ids.index(e) for e in self.edge_ids]
-        self.tensor.transpose(transposition_order)
-
-
+        transposition_order = [n_edge_ids.index(e) for e in input_edges]
+        self.tensor = self.tensor.transpose(transposition_order)
+        self.edge_ids = input_edges
 
     def edge_set_and_xor(self, other_node):
         intersection = []

@@ -16,13 +16,9 @@ def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = Tr
 
     """
 
-    # TODO: Alexandru, determine if more than one connected component in the graph
-    number_components = 1
-    if number_components > 1:
-        raise Exception("Circuit is not conected!")
-        # return 1
-
-    print("\n##################### msc tensorfy ##########################")
+    print(
+        "\n############################################## msc tensorfy ##############################################"
+    )
 
     # Hadamard gate tensor will be used for the Hadamard edges.
     had = 1 / math.sqrt(2) * np.array([[1, 1], [1, -1]])
@@ -42,8 +38,10 @@ def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = Tr
     print("graph edge_list :", mansikka_edge_map)
     print("contraction_order 0:", contraction_ids)
 
-    #
-    # Do not contract edges connecting to input and output nodes
+
+
+
+    # Do not contract edges  connecting to input and output nodes
     nr_do_not_contract = pyzx_graph.num_outputs()+pyzx_graph.num_inputs()
     while len(contraction_ids) > nr_do_not_contract:
 
@@ -58,18 +56,18 @@ def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = Tr
         print("## edge under contraction:", contraction_edge_index)
         print("## input:{} | output:{}".format(edge["inp"], edge["out"]))
 
-
         input_axes = [] # contraction axes for the input node.
         output_axes = [] # contraction axes for the output node.
 
         edge_id_and, edge_id_xor = mansikka_output_node.edge_set_and_xor(mansikka_input_node)
 
-        # These are the axes that will be removed
+        # These are the axes the will be removed
         for edgex in edge_id_and:
             if mansikka_edge_map[edgex]["inp"] in pyzx_graph.inputs():
                 input_axes.append(1)  # 1
             else:
                 input_axes.append(mansikka_input_node.edge_ids.index(edgex))
+
             output_axes.append(mansikka_output_node.edge_ids.index(edgex))
 
         # For remaining edges, update the end points
@@ -79,21 +77,20 @@ def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = Tr
             if mansikka_edge_map[edgex]["out"] == edge["inp"]:
                 mansikka_edge_map[edgex]["out"] = edge["out"]
 
-        # remove the  input node
+        # remove the input node from the map
         mansikka_node_map.pop(edge["inp"])
         print("# remaining nodes#")
         print(" \nnodes:{} \n".format(mansikka_node_map.keys()))
 
-        # update the edge_list
+        # update the edge list
         # remove contracted edges
         for deprecate_edge_id in edge_id_and:
             if deprecate_edge_id in contraction_ids:
                 contraction_ids.remove(deprecate_edge_id)
                 mansikka_edge_map.pop(deprecate_edge_id)
 
-        print("\n##!!calculate new tensor!!##")
-
-        print("ni:{}|no{}".format(input_axes, output_axes))
+        # calculate new tensor and update the output node tensor
+        print("ni:{}|no{}".format(input_axes,output_axes))
         new_tensor = np.tensordot(
              mansikka_input_node.tensor,mansikka_output_node.tensor, axes=(input_axes, output_axes)
         )
@@ -102,13 +99,12 @@ def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = Tr
         # update output node
         mansikka_output_node.update_edges_in_tensor(mansikka_input_node, mansikka_edge_map)
 
-    # TODO: Is this up to date from the while?
+
     tensor = mansikka_output_node.tensor
     if preserve_scalar:
         tensor *= pyzx_graph.scalar.to_number()
 
     return tensor
-
 
 
 def reorder_contraction_edge_list(contraction_edge_list, nr_vert, pyzx_graph):
@@ -197,6 +193,7 @@ def print_edgelist(edgelist):
 
 
 
+
 #######################################################################################################
         # # treat the Hadamard edges
         # # need to be verrified
@@ -226,3 +223,7 @@ def print_edgelist(edgelist):
         #             if inp_edge in mansikka_output_node.edge_ids:
         #                 input_axes.append(i)
 # ######################################################################################################
+
+
+
+

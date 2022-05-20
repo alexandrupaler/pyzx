@@ -14,7 +14,7 @@ baseline_pipeline = McSimPipeline(name="baseline")
 mansikka_extractor = MansikkaExtractor(params={"m": 2, "nr_iter": 6})
 mansikka_pipeline = McSimPipeline(name="mansikka", extractor=mansikka_extractor)
 
-qubits = 5
+qubits = 2
 depth = 10
 
 # Force seed
