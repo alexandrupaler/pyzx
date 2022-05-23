@@ -142,6 +142,53 @@ def CNOT_HAD_PHASE_circuit(
     return c
 
 
+
+def CNOT_HAD_PHASE_circuit_mixt(
+    qubits: int,
+    depth: int,
+    p_had: float = 0.5,
+    p_t: float = 0.2,
+    p_cnot: float = 0.5
+) -> Circuit:
+    """Construct a Circuit consisting of CNOT, HAD and phase gates.
+    The default phase gate is the T gate, but if ``clifford=True``\ , then
+    this is replaced by the S gate.
+
+    Args:
+        qubits: number of qubits of the circuit
+        depth: number of gates in the circuit
+        p_had: probability that each gate is a Hadamard gate
+        p_t: probability that each gate is a T gate (or if ``clifford`` is set, S gate)
+        clifford: when set to True, the phase gates are S gates instead of T gates.
+
+    Returns:
+        A random circuit consisting of Hadamards, CNOT gates and phase gates.
+
+    """
+
+    c = Circuit(qubits)
+    for _ in range(depth):
+        r = random.random()
+        if r > 1 - p_had:
+            c.add_gate("HAD", random.randrange(qubits))
+        elif r > 1 - p_had - p_t:
+            t = random.random()
+            if t <= 0.5:
+                c.add_gate("T", random.randrange(qubits))
+            else:
+                c.add_gate("S", random.randrange(qubits))
+
+        r = random.random()
+        if r > 1- p_cnot:
+            tgt = random.randrange(qubits)
+            while True:
+                ctrl = random.randrange(qubits)
+                if ctrl != tgt:
+                    break
+            c.add_gate("CNOT", tgt, ctrl)
+    return c
+
+
 def cnots(qubits: int, depth: int, backend: Optional[str] = None) -> BaseGraph:
     """Generates a circuit consisting of randomly placed CNOT gates.
 
