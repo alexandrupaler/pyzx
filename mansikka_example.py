@@ -27,8 +27,8 @@ circuit = pyzx.generate.CNOT_HAD_PHASE_circuit(qubits, depth, p_had=0.3, cliffor
 
 
 # Visualising the circuit
-pyzx.draw_matplotlib(circuit.to_graph(), labels=True, figsize=(8, 4), h_edge_draw='blue', show_scalar=False,
-                     rows=None).savefig("circuit_0.png")
+# pyzx.draw_matplotlib(circuit.to_graph(), labels=True, figsize=(8, 4), h_edge_draw='blue', show_scalar=False,
+#                      rows=None).savefig("circuit_0.png")
 
 baseline_circ, baseline_graph = baseline_pipeline.load(circuit)
 matrix_0 = baseline_pipeline.extract(baseline_graph)
@@ -45,23 +45,23 @@ for i in range(len(matrix_0)):
     for j in range(len(matrix_0)):
         s = s + (abs(matrix_0[i][j] - matrix_1[i][j])) ** 2
 print("Dif:", s)
-
-print("\n\n Mansikka Done !")
-
-
-
-print("## Time performace##:\n")
-
-initial_state = np.zeros((2 ** qubits,), dtype=np.complex64)
-initial_state[0] = 1
-
-result = baseline_pipeline.evaluate_with_mcsim(initial_state, baseline_graph)
-print("\n ####baseline:####\n", baseline_pipeline.timing)
-
-result = mansikka_pipeline.evaluate_with_mcsim(initial_state, mansikka_graph)
-print("\n ####mansika:####\n", mansikka_pipeline.timing)
-
-print("\n\n ## -Mansika performance- ##!")
+#
+# print("\n\n Mansikka Done !")
+#
+#
+#
+# print("## Time performace##:\n")
+#
+# initial_state = np.zeros((2 ** qubits,), dtype=np.complex64)
+# initial_state[0] = 1
+#
+# result = baseline_pipeline.evaluate_with_mcsim(initial_state, baseline_graph)
+# print("\n ####baseline:####\n", baseline_pipeline.timing)
+#
+# result = mansikka_pipeline.evaluate_with_mcsim(initial_state, mansikka_graph)
+# print("\n ####mansika:####\n", mansikka_pipeline.timing)
+#
+# print("\n\n ## -Mansika performance- ##!")
 #####################################################
 
 def test_treewidth(quantum_circuit):

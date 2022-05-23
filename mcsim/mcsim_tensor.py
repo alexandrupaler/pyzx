@@ -14,12 +14,13 @@ import pyzx.tensor as pyzxtensor
 from .mcsim_node import MansikkaNode
 
 
+
 def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = True) -> np.ndarray:
     """
 
     """
 
-    print("\n################## msc tensorfy ####################")
+    #print("\n################## msc tensorfy ####################")
 
     # Dictionaries with the nodes and edges in the graph.
     mansikka_node_map, mansikka_edge_map = get_nodes_edges(pyzx_graph)
@@ -103,7 +104,7 @@ def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = Tr
     if preserve_scalar:
         tensor *= pyzx_graph.scalar.to_number()
 
-    print("\n################## msc tensorfy -done- ####################")
+    #print("\n################## msc tensorfy -done- ####################")
     return tensor
 
 
