@@ -42,7 +42,7 @@ class MansikkaExtractor(BaseExtractor):
 
 def get_contraction_order(graph, nr_tensors_to_rem, nr_iter=10):
 
-    working_graph = MansikkaGraph(graph.vertices.copy(), graph.edges.copy())
+    working_graph = graph #MansikkaGraph(graph.vertices.copy(), graph.edges.copy())
     initial_order = [k for k in graph.vertices]
     #return initial_order
     contraction_order = []

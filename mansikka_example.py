@@ -10,6 +10,7 @@ import pyzx
 from mcsim import McSimPipeline
 from mcsim.extractors import MansikkaExtractor, MansikkaGraph
 
+
 # Pipeline example  #
 print("\n\n ## Mansikka example ##")
 
@@ -19,7 +20,7 @@ mansikka_extractor = MansikkaExtractor(params={"m": 2, "nr_iter": 6})
 mansikka_pipeline = McSimPipeline(name="mansikka", extractor=mansikka_extractor)
 
 qubits = 7
-depth = 80
+depth = 90
 
 # Force seed
 random.seed(1)

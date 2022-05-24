@@ -40,14 +40,19 @@ from typing import Optional
 
 try:
     import cupy as np
+    print("CUPY tensorfy!")
 except:
     import numpy as np
 
     np.set_printoptions(suppress=True)
 
+import time
+
 # typing imports
 from typing import TYPE_CHECKING, List, Dict, Union
 from .utils import FractionLike, FloatInt, VertexType, EdgeType
+
+
 
 if TYPE_CHECKING:
     from .graph.base import BaseGraph, VT, ET
@@ -117,6 +122,9 @@ def tensorfy(g: "BaseGraph[VT,ET]", preserve_scalar: bool = True) -> np.ndarray:
     """Takes in a Graph and outputs a multidimensional numpy array
     representing the linear map the ZX-diagram implements.
     Beware that quantum circuits take exponential memory to represent."""
+
+    tic = time.perf_counter()
+
     if g.is_hybrid():
         raise ValueError("Hybrid graphs are not supported.")
     rows = g.rows()
@@ -304,6 +312,8 @@ def tensorfy(g: "BaseGraph[VT,ET]", preserve_scalar: bool = True) -> np.ndarray:
     # print("tesnsor shape:", tensor.shape)
     # print("tensor:", tensor)
 
+    toc = time.perf_counter()
+    print(f"Time in tensorfy {toc - tic:0.4f} seconds")
     return tensor
 
 

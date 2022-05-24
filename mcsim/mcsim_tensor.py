@@ -1,11 +1,12 @@
 import math
 
-
 try:
     import cupy as np
-    print("CUPY!")
+
+    print("CUPY mcsim_tensorfy!")
 except:
     import numpy as np
+
     np.set_printoptions(suppress=True)
 
 from pyzx.utils import EdgeType
@@ -13,14 +14,16 @@ import pyzx.tensor as pyzxtensor
 
 from .mcsim_node import MansikkaNode
 
+import time
+#from memory_profiler import profile
 
-
+#@profile()
 def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = True) -> np.ndarray:
     """
 
     """
-
-    #print("\n################## msc tensorfy ####################")
+    tic = time.perf_counter()
+    # print("\n################## msc tensorfy ####################")
 
     # Dictionaries with the nodes and edges in the graph.
     mansikka_node_map, mansikka_edge_map = get_nodes_edges(pyzx_graph)
@@ -41,12 +44,13 @@ def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = Tr
 
     # TODO  Alexandru: Check if it's a compact circuit
 
-
+    nr_edges_to_contract = len(contraction_ids) - (pyzx_graph.num_outputs() + pyzx_graph.num_inputs())
 
     # Do not contract edges  connecting to input and output nodes
     nr_do_not_contract = pyzx_graph.num_outputs() + pyzx_graph.num_inputs()
     while len(contraction_ids) > nr_do_not_contract:
 
+        #print("Contraction status: {}/{}".format(len(contraction_ids) - nr_do_not_contract, nr_edges_to_contract))
         # print("\n## contraction_edge in named_contraction_order ##\n")
 
         contraction_edge_index = contraction_ids[0]
@@ -78,8 +82,9 @@ def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = Tr
             if mansikka_edge_map[edgex]["out"] == edge["inp"]:
                 mansikka_edge_map[edgex]["out"] = edge["out"]
 
+
         # remove the input node from the map
-        del(mansikka_node_map[edge["inp"]])
+        del (mansikka_node_map[edge["inp"]])
         # print("# remaining nodes#")
         # print(" \nnodes:{} \n".format(mansikka_node_map.keys()))
 
@@ -89,25 +94,31 @@ def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = Tr
             if deprecate_edge_id in contraction_ids:
                 contraction_ids.remove(deprecate_edge_id)
                 mansikka_edge_map.pop(deprecate_edge_id)
+        del (deprecate_edge_id)
 
         # calculate new tensor and update the output node tensor
         # print("ni:{}|no{}".format(input_axes, output_axes))
-        new_tensor = np.tensordot(
+        # new_tensor = np.tensordot(
+        #     mansikka_input_node.tensor, mansikka_output_node.tensor, axes=(input_axes, output_axes)
+        # )
+        mansikka_output_node.set_tensor(np.tensordot(
             mansikka_input_node.tensor, mansikka_output_node.tensor, axes=(input_axes, output_axes)
-        )
-        mansikka_output_node.set_tensor(new_tensor)
+        ))
 
         # update output node
         mansikka_output_node.update_edges_in_tensor(mansikka_input_node, mansikka_edge_map)
+        del(mansikka_input_node)
 
     tensor = mansikka_output_node.tensor
     if preserve_scalar:
         tensor *= pyzx_graph.scalar.to_number()
 
-    #print("\n################## msc tensorfy -done- ####################")
+    # print("\n################## msc tensorfy -done- ####################")
+    toc = time.perf_counter()
+    print(f"Time in mcsim_tensorfy {toc - tic:0.4f} seconds")
     return tensor
 
-
+#@profile()
 def convert_hadamard_edges(mansikka_edge_map, mansikka_node_map, pyzx_graph):
     # Eloiminate Hadamrd edges
     for edge_key in mansikka_edge_map:
@@ -121,7 +132,7 @@ def convert_hadamard_edges(mansikka_edge_map, mansikka_node_map, pyzx_graph):
                 new_edge_order = mansikka_node_map[edge["inp"]].edge_ids
                 new_edge_order.remove(edge_key)
                 new_edge_order.append(edge_key)
-                #transposition_order = [mansikka_node_map[edge["inp"]].edge_ids.index(k) for k in new_edge_order]
+                # transposition_order = [mansikka_node_map[edge["inp"]].edge_ids.index(k) for k in new_edge_order]
                 mansikka_node_map[edge["inp"]].set_tensor(new_tensor)
             else:
                 new_tensor = np.tensordot(had_tensor, mansikka_node_map[edge["out"]].tensor,
@@ -129,10 +140,10 @@ def convert_hadamard_edges(mansikka_edge_map, mansikka_node_map, pyzx_graph):
                 new_edge_order = mansikka_node_map[edge["out"]].edge_ids
                 new_edge_order.remove(edge_key)
                 new_edge_order.insert(0, edge_key)
-                #transposition_order = [mansikka_node_map[edge["out"]].edge_ids.index(k) for k in new_edge_order]
+                # transposition_order = [mansikka_node_map[edge["out"]].edge_ids.index(k) for k in new_edge_order]
                 mansikka_node_map[edge["out"]].set_tensor(new_tensor)
 
-
+#@profile()
 def reorder_contraction_edge_list(contraction_edge_list, nr_vert, pyzx_graph):
     # move the ede with  inputs at the end
     input_edge_list = [-1] * pyzx_graph.num_inputs()
@@ -155,7 +166,7 @@ def reorder_contraction_edge_list(contraction_edge_list, nr_vert, pyzx_graph):
     # print("input_order:", input_edge_list)
     # print("output_order:", output_edge_list)
 
-
+#@profile()
 def get_nodes_edges(pyzx_graph):
     node_map = {}
     edge_map = {}
@@ -214,6 +225,3 @@ def get_tensor_from_g(pyzx_graph, v):
         )
 
     return t
-
-
-
