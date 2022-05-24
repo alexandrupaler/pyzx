@@ -20,12 +20,12 @@ class SimpleOrderExtractor(BaseExtractor):
 
 
         initial_order = [k for k in working_graph.vertices]
-        print("initial_order 0:",initial_order)
+        #print("initial_order 0:",initial_order)
         if self.params["order"] == 0:
             contraction_order = initial_order
         elif self.params["order"] == 1:
             random.shuffle(initial_order)
-            print("initial_order 1:", initial_order)
+            #print("initial_order 1:", initial_order)
             contraction_order = initial_order
 
         return graph.to_matrix(

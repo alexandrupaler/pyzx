@@ -47,6 +47,7 @@ except:
     np.set_printoptions(suppress=True)
 
 import time
+#from memory_profiler import  profile
 
 # typing imports
 from typing import TYPE_CHECKING, List, Dict, Union
@@ -117,7 +118,7 @@ def pop_and_shift_uncontracted_indices(past_verts, indices):
             indices[w] = l2
     return past_to_contract
 
-
+#@profile
 def tensorfy(g: "BaseGraph[VT,ET]", preserve_scalar: bool = True) -> np.ndarray:
     """Takes in a Graph and outputs a multidimensional numpy array
     representing the linear map the ZX-diagram implements.

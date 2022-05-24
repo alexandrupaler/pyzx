@@ -15,6 +15,9 @@ import pyzx.tensor as pyzxtensor
 from .mcsim_node import MansikkaNode
 
 import time
+#from  memory_profiler import profile
+import gc
+
 #from memory_profiler import profile
 
 #@profile()
@@ -84,7 +87,8 @@ def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = Tr
 
 
         # remove the input node from the map
-        del (mansikka_node_map[edge["inp"]])
+        del mansikka_node_map[edge["inp"]]
+        #gc.collect()
         # print("# remaining nodes#")
         # print(" \nnodes:{} \n".format(mansikka_node_map.keys()))
 
@@ -94,8 +98,8 @@ def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = Tr
             if deprecate_edge_id in contraction_ids:
                 contraction_ids.remove(deprecate_edge_id)
                 mansikka_edge_map.pop(deprecate_edge_id)
-        del (deprecate_edge_id)
-
+        del deprecate_edge_id
+        #gc.collect()
         # calculate new tensor and update the output node tensor
         # print("ni:{}|no{}".format(input_axes, output_axes))
         # new_tensor = np.tensordot(
@@ -108,6 +112,7 @@ def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = Tr
         # update output node
         mansikka_output_node.update_edges_in_tensor(mansikka_input_node, mansikka_edge_map)
         del(mansikka_input_node)
+        #gc.collect()
 
     tensor = mansikka_output_node.tensor
     if preserve_scalar:
