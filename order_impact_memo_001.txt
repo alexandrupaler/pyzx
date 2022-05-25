@@ -1,0 +1,12 @@
+CUPY0!
+CUPY tensorfy!
+CUPY mcsim_tensorfy!
+
+
+ ## Mansikka example ##
+<class 'pyzx.circuit.Circuit'>
+Graph(90 vertices, 109 edges)
+<class 'pyzx.circuit.Circuit'>
+Graph(90 vertices, 109 edges)
+<class 'pyzx.circuit.Circuit'>
+Graph(90 vertices, 109 edges)

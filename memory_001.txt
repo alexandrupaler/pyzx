@@ -1,0 +1,392 @@
+CUPY0!
+CUPY tensorfy!
+CUPY mcsim_tensorfy!
+
+
+ ## Mansikka example ##
+<class 'pyzx.circuit.Circuit'>
+Graph(151 vertices, 191 edges)
+Time in tensorfy 0.7954 seconds
+(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2)
+[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13] [0, 2, 4, 6, 8, 10, 12] [1, 3, 5, 7, 9, 11, 13]
+0.19904446601867676 0.0
+<class 'pyzx.circuit.Circuit'>
+Graph(151 vertices, 191 edges)
+Filename: C:\Users\tomut\Documents\GitHub\pyzx\mcsim\mcsim_tensor.py
+
+Line #    Mem usage    Increment  Occurrences   Line Contents
+=============================================================
+   169    703.2 MiB    703.2 MiB           1   @profile()
+   170                                         def get_nodes_edges(pyzx_graph):
+   171    703.2 MiB      0.0 MiB           1       node_map = {}
+   172    703.2 MiB      0.0 MiB           1       edge_map = {}
+   173                                         
+   174                                             # The key to the edge in edge_map is an integer
+   175                                             # Each edge has an input, an output and a type.
+   176                                             # In the beginning, the nodes are labeled in such a way that
+   177                                             # the one with the smaller index is the input.
+   178                                             # The type may indicate the presence of a Hadamard between the end vertices.
+   179    703.2 MiB      0.0 MiB           1       edge_key = 0
+   180    703.2 MiB      0.0 MiB         192       for edg in pyzx_graph.edges():
+   181    703.2 MiB      0.0 MiB         191           edge_map[edge_key] = {
+   182    703.2 MiB      0.0 MiB         191               "inp": min(edg),
+   183    703.2 MiB      0.0 MiB         191               "out": max(edg),
+   184    703.2 MiB      0.0 MiB         191               "type": pyzx_graph.edge_type(edg),
+   185                                                 }
+   186    703.2 MiB      0.0 MiB         191           edge_key = edge_key + 1
+   187                                         
+   188                                             # The key of a node will be its initial index
+   189    703.2 MiB      0.0 MiB         152       for v in pyzx_graph.vertices():
+   190    703.2 MiB      0.0 MiB         151           node = MansikkaNode(v, pyzx_graph)
+   191    703.2 MiB      0.0 MiB         151           node_map[v] = node
+   192                                         
+   193    703.2 MiB      0.0 MiB           1       return node_map, edge_map
+
+
+Filename: C:\Users\tomut\Documents\GitHub\pyzx\mcsim\mcsim_tensor.py
+
+Line #    Mem usage    Increment  Occurrences   Line Contents
+=============================================================
+   121    703.2 MiB    703.2 MiB           1   @profile()
+   122                                         def convert_hadamard_edges(mansikka_edge_map, mansikka_node_map, pyzx_graph):
+   123                                             # Eloiminate Hadamrd edges
+   124    703.2 MiB      0.0 MiB         192       for edge_key in mansikka_edge_map:
+   125    703.2 MiB      0.0 MiB         191           edge = mansikka_edge_map[edge_key]
+   126    703.2 MiB      0.0 MiB         191           if edge["type"] == EdgeType.HADAMARD:  # hadamard
+   127    703.2 MiB      0.0 MiB          25               mansikka_edge_map[edge_key]["type"] = EdgeType.SIMPLE
+   128    703.2 MiB      0.0 MiB          25               had_tensor = 1 / np.sqrt(2) * np.array([[1, 1], [1, -1]])  # --0--H--1--
+   129    703.2 MiB      0.0 MiB          25               if edge["inp"] not in pyzx_graph.inputs():
+   130    703.2 MiB      0.0 MiB          48                   new_tensor = np.tensordot(mansikka_node_map[edge["inp"]].tensor, had_tensor,
+   131    703.2 MiB      0.0 MiB          24                                             axes=([mansikka_node_map[edge["inp"]].edge_ids.index(edge_key)], [0]))
+   132    703.2 MiB      0.0 MiB          24                   new_edge_order = mansikka_node_map[edge["inp"]].edge_ids
+   133    703.2 MiB      0.0 MiB          24                   new_edge_order.remove(edge_key)
+   134    703.2 MiB      0.0 MiB          24                   new_edge_order.append(edge_key)
+   135                                                         # transposition_order = [mansikka_node_map[edge["inp"]].edge_ids.index(k) for k in new_edge_order]
+   136    703.2 MiB      0.0 MiB          24                   mansikka_node_map[edge["inp"]].set_tensor(new_tensor)
+   137                                                     else:
+   138    703.2 MiB      0.0 MiB           2                   new_tensor = np.tensordot(had_tensor, mansikka_node_map[edge["out"]].tensor,
+   139    703.2 MiB      0.0 MiB           1                                             axes=([1], [mansikka_node_map[edge["out"]].edge_ids.index(edge_key)]))
+   140    703.2 MiB      0.0 MiB           1                   new_edge_order = mansikka_node_map[edge["out"]].edge_ids
+   141    703.2 MiB      0.0 MiB           1                   new_edge_order.remove(edge_key)
+   142    703.2 MiB      0.0 MiB           1                   new_edge_order.insert(0, edge_key)
+   143                                                         # transposition_order = [mansikka_node_map[edge["out"]].edge_ids.index(k) for k in new_edge_order]
+   144    703.2 MiB      0.0 MiB           1                   mansikka_node_map[edge["out"]].set_tensor(new_tensor)
+
+
+Filename: C:\Users\tomut\Documents\GitHub\pyzx\mcsim\mcsim_tensor.py
+
+Line #    Mem usage    Increment  Occurrences   Line Contents
+=============================================================
+   146    703.2 MiB    703.2 MiB           1   @profile()
+   147                                         def reorder_contraction_edge_list(contraction_edge_list, nr_vert, pyzx_graph):
+   148                                             # move the ede with  inputs at the end
+   149    703.2 MiB      0.0 MiB           1       input_edge_list = [-1] * pyzx_graph.num_inputs()
+   150                                             # move the ede with  output at the end
+   151    703.2 MiB      0.0 MiB           1       output_edge_list = [-1] * pyzx_graph.num_outputs()
+   152    703.2 MiB      0.0 MiB         192       for edge in contraction_edge_list:
+   153    703.2 MiB      0.0 MiB         191           if edge[0] in pyzx_graph.inputs():
+   154    703.2 MiB      0.0 MiB           7               position = pyzx_graph.num_inputs() - edge[0] - 1
+   155    703.2 MiB      0.0 MiB           7               input_edge_list[position] = edge
+   156    703.2 MiB      0.0 MiB         184           elif edge[1] in pyzx_graph.outputs():
+   157    703.2 MiB      0.0 MiB           7               position = pyzx_graph.num_outputs() - (nr_vert - edge[1] - 1) - 1
+   158    703.2 MiB      0.0 MiB           7               output_edge_list[position] = edge
+   159                                                 # print("index", position)
+   160    703.2 MiB      0.0 MiB           8       for edge in input_edge_list:
+   161    703.2 MiB      0.0 MiB           7           contraction_edge_list.remove(edge)
+   162    703.2 MiB      0.0 MiB           8       for edge in output_edge_list:
+   163    703.2 MiB      0.0 MiB           7           contraction_edge_list.remove(edge)
+   164    703.2 MiB      0.0 MiB           1       contraction_edge_list.extend(input_edge_list)
+   165    703.2 MiB      0.0 MiB           1       contraction_edge_list.extend(output_edge_list)
+   166                                             # print("input_order:", input_edge_list)
+   167                                             # print("output_order:", output_edge_list)
+
+
+Contraction status: 177/177
+Contraction status: 176/177
+Contraction status: 175/177
+Contraction status: 174/177
+Contraction status: 173/177
+Contraction status: 172/177
+Contraction status: 171/177
+Contraction status: 170/177
+Contraction status: 169/177
+Contraction status: 168/177
+Contraction status: 167/177
+Contraction status: 166/177
+Contraction status: 165/177
+Contraction status: 164/177
+Contraction status: 163/177
+Contraction status: 162/177
+Contraction status: 161/177
+Contraction status: 160/177
+Contraction status: 159/177
+Contraction status: 158/177
+Contraction status: 157/177
+Contraction status: 156/177
+Contraction status: 155/177
+Contraction status: 154/177
+Contraction status: 153/177
+Contraction status: 152/177
+Contraction status: 151/177
+Contraction status: 150/177
+Contraction status: 149/177
+Contraction status: 148/177
+Contraction status: 147/177
+Contraction status: 146/177
+Contraction status: 145/177
+Contraction status: 144/177
+Contraction status: 143/177
+Contraction status: 142/177
+Contraction status: 141/177
+Contraction status: 140/177
+Contraction status: 139/177
+Contraction status: 138/177
+Contraction status: 137/177
+Contraction status: 136/177
+Contraction status: 135/177
+Contraction status: 134/177
+Contraction status: 133/177
+Contraction status: 132/177
+Contraction status: 131/177
+Contraction status: 130/177
+Contraction status: 129/177
+Contraction status: 128/177
+Contraction status: 127/177
+Contraction status: 126/177
+Contraction status: 125/177
+Contraction status: 124/177
+Contraction status: 123/177
+Contraction status: 122/177
+Contraction status: 120/177
+Contraction status: 119/177
+Contraction status: 118/177
+Contraction status: 117/177
+Contraction status: 116/177
+Contraction status: 115/177
+Contraction status: 114/177
+Contraction status: 113/177
+Contraction status: 112/177
+Contraction status: 109/177
+Contraction status: 108/177
+Contraction status: 107/177
+Contraction status: 106/177
+Contraction status: 105/177
+Contraction status: 104/177
+Contraction status: 102/177
+Contraction status: 101/177
+Contraction status: 100/177
+Contraction status: 99/177
+Contraction status: 98/177
+Contraction status: 97/177
+Contraction status: 95/177
+Contraction status: 92/177
+Contraction status: 91/177
+Contraction status: 90/177
+Contraction status: 89/177
+Contraction status: 88/177
+Contraction status: 87/177
+Contraction status: 86/177
+Contraction status: 85/177
+Contraction status: 84/177
+Contraction status: 83/177
+Contraction status: 82/177
+Contraction status: 81/177
+Contraction status: 79/177
+Contraction status: 78/177
+Contraction status: 77/177
+Contraction status: 76/177
+Contraction status: 74/177
+Contraction status: 73/177
+Contraction status: 72/177
+Contraction status: 71/177
+Contraction status: 70/177
+Contraction status: 69/177
+Contraction status: 68/177
+Contraction status: 67/177
+Contraction status: 66/177
+Contraction status: 65/177
+Contraction status: 63/177
+Contraction status: 61/177
+Contraction status: 60/177
+Contraction status: 58/177
+Contraction status: 57/177
+Contraction status: 55/177
+Contraction status: 54/177
+Contraction status: 53/177
+Contraction status: 52/177
+Contraction status: 50/177
+Contraction status: 45/177
+Contraction status: 44/177
+Contraction status: 43/177
+Contraction status: 41/177
+Contraction status: 39/177
+Contraction status: 38/177
+Contraction status: 34/177
+Contraction status: 32/177
+Contraction status: 31/177
+Contraction status: 26/177
+Contraction status: 21/177
+Contraction status: 20/177
+Contraction status: 19/177
+Contraction status: 16/177
+Contraction status: 15/177
+Contraction status: 13/177
+Contraction status: 10/177
+Contraction status: 7/177
+Contraction status: 5/177
+Contraction status: 3/177
+Contraction status: 2/177
+Contraction status: 1/177
+Time in mcsim_tensorfy 1.4674 seconds
+Filename: C:\Users\tomut\Documents\GitHub\pyzx\mcsim\mcsim_tensor.py
+
+Line #    Mem usage    Increment  Occurrences   Line Contents
+=============================================================
+    20    703.2 MiB    703.2 MiB           1   @profile()
+    21                                         def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = True) -> np.ndarray:
+    22                                             """
+    23                                         
+    24                                             """
+    25    703.2 MiB      0.0 MiB           1       tic = time.perf_counter()
+    26                                             # print("\n################## msc tensorfy ####################")
+    27                                         
+    28                                             # Dictionaries with the nodes and edges in the graph.
+    29    703.2 MiB      0.0 MiB           1       mansikka_node_map, mansikka_edge_map = get_nodes_edges(pyzx_graph)
+    30                                         
+    31                                             # Eliminate H edges:
+    32    703.2 MiB      0.0 MiB           1       convert_hadamard_edges(mansikka_edge_map, mansikka_node_map, pyzx_graph)
+    33                                         
+    34    703.2 MiB      0.0 MiB           1       nr_vert = pyzx_graph.num_vertices()
+    35    703.2 MiB      0.0 MiB           1       reorder_contraction_edge_list(contraction_edge_list, nr_vert, pyzx_graph)
+    36                                         
+    37                                             # Contracting order is provided like a list of tuples, and now we change it into a list of ids.
+    38    703.2 MiB      0.0 MiB           1       edge_list = list(pyzx_graph.edges())
+    39    703.2 MiB      0.0 MiB         195       contraction_ids = [
+    40    703.2 MiB      0.0 MiB           1           edge_list.index(edge) for edge in contraction_edge_list
+    41                                             ]
+    42                                             # print("graph edge_list :", mansikka_edge_map)
+    43                                             # print("contraction_order 0:", contraction_ids)
+    44                                         
+    45                                             # TODO  Alexandru: Check if it's a compact circuit
+    46                                         
+    47    703.2 MiB      0.0 MiB           1       nr_edges_to_contract = len(contraction_ids) - (pyzx_graph.num_outputs() + pyzx_graph.num_inputs())
+    48                                         
+    49                                             # Do not contract edges  connecting to input and output nodes
+    50    703.2 MiB      0.0 MiB           1       nr_do_not_contract = pyzx_graph.num_outputs() + pyzx_graph.num_inputs()
+    51    703.5 MiB      0.0 MiB         137       while len(contraction_ids) > nr_do_not_contract:
+    52                                         
+    53    703.5 MiB      0.0 MiB         136           print("Contraction status: {}/{}".format(len(contraction_ids) - nr_do_not_contract, nr_edges_to_contract))
+    54                                                 # print("\n## contraction_edge in named_contraction_order ##\n")
+    55                                         
+    56    703.5 MiB      0.0 MiB         136           contraction_edge_index = contraction_ids[0]
+    57    703.5 MiB      0.0 MiB         136           edge = mansikka_edge_map[contraction_edge_index]
+    58    703.5 MiB      0.0 MiB         136           mansikka_input_node = mansikka_node_map[edge["inp"]]
+    59    703.5 MiB      0.0 MiB         136           mansikka_output_node = mansikka_node_map[edge["out"]]
+    60                                         
+    61                                                 # print("## edge under contraction:", contraction_edge_index)
+    62                                                 # print("## input:{} | output:{}".format(edge["inp"], edge["out"]))
+    63                                         
+    64    703.5 MiB      0.0 MiB         136           input_axes = []  # contraction axes for the input node.
+    65    703.5 MiB      0.0 MiB         136           output_axes = []  # contraction axes for the output node.
+    66                                         
+    67    703.5 MiB      0.0 MiB         136           edge_id_and, edge_id_xor = mansikka_output_node.edge_set_and_xor(mansikka_input_node)
+    68                                         
+    69                                                 # These are the axes the will be removed
+    70    703.5 MiB      0.0 MiB         313           for edgex in edge_id_and:
+    71    703.5 MiB      0.0 MiB         177               if mansikka_edge_map[edgex]["inp"] in pyzx_graph.inputs():
+    72                                                         input_axes.append(1)  # 1
+    73                                                     else:
+    74    703.5 MiB      0.0 MiB         177                   input_axes.append(mansikka_input_node.edge_ids.index(edgex))
+    75                                         
+    76    703.5 MiB      0.0 MiB         177               output_axes.append(mansikka_output_node.edge_ids.index(edgex))
+    77                                         
+    78                                                 # For remaining edges, update the end points
+    79    703.5 MiB      0.0 MiB        1276           for edgex in edge_id_xor:
+    80    703.5 MiB      0.0 MiB        1140               if mansikka_edge_map[edgex]["inp"] == edge["inp"]:
+    81    703.5 MiB      0.0 MiB         210                   mansikka_edge_map[edgex]["inp"] = edge["out"]
+    82    703.5 MiB      0.0 MiB        1140               if mansikka_edge_map[edgex]["out"] == edge["inp"]:
+    83    703.5 MiB      0.0 MiB         315                   mansikka_edge_map[edgex]["out"] = edge["out"]
+    84                                         
+    85                                         
+    86                                                 # remove the input node from the map
+    87    703.5 MiB      0.0 MiB         136           del (mansikka_node_map[edge["inp"]])
+    88                                                 # print("# remaining nodes#")
+    89                                                 # print(" \nnodes:{} \n".format(mansikka_node_map.keys()))
+    90                                         
+    91                                                 # update the edge list
+    92                                                 # remove contracted edges
+    93    703.5 MiB      0.0 MiB         313           for deprecate_edge_id in edge_id_and:
+    94    703.5 MiB      0.0 MiB         177               if deprecate_edge_id in contraction_ids:
+    95    703.5 MiB      0.0 MiB         177                   contraction_ids.remove(deprecate_edge_id)
+    96    703.5 MiB      0.0 MiB         177                   mansikka_edge_map.pop(deprecate_edge_id)
+    97    703.5 MiB      0.0 MiB         136           del (deprecate_edge_id)
+    98                                         
+    99                                                 # calculate new tensor and update the output node tensor
+   100                                                 # print("ni:{}|no{}".format(input_axes, output_axes))
+   101                                                 # new_tensor = np.tensordot(
+   102                                                 #     mansikka_input_node.tensor, mansikka_output_node.tensor, axes=(input_axes, output_axes)
+   103                                                 # )
+   104    703.5 MiB      0.3 MiB         272           mansikka_output_node.set_tensor(np.tensordot(
+   105    703.5 MiB      0.0 MiB         136               mansikka_input_node.tensor, mansikka_output_node.tensor, axes=(input_axes, output_axes)
+   106                                                 ))
+   107                                         
+   108                                                 # update output node
+   109    703.5 MiB      0.0 MiB         136           mansikka_output_node.update_edges_in_tensor(mansikka_input_node, mansikka_edge_map)
+   110    703.5 MiB      0.0 MiB         136           del(mansikka_input_node)
+   111                                         
+   112    703.5 MiB      0.0 MiB           1       tensor = mansikka_output_node.tensor
+   113    703.5 MiB      0.0 MiB           1       if preserve_scalar:
+   114    703.5 MiB      0.0 MiB           1           tensor *= pyzx_graph.scalar.to_number()
+   115                                         
+   116                                             # print("\n################## msc tensorfy -done- ####################")
+   117    703.5 MiB      0.0 MiB           1       toc = time.perf_counter()
+   118    703.5 MiB      0.0 MiB           1       print(f"Time in mcsim_tensorfy {toc - tic:0.4f} seconds")
+   119    703.5 MiB      0.0 MiB           1       return tensor
+
+
+(2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2)
+[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13] [0, 2, 4, 6, 8, 10, 12] [1, 3, 5, 7, 9, 11, 13]
+0.219130277633667 0.0
+Baseline matrix 
+ [[ 2.56682141e-17+8.83883476e-02j  3.26071080e-17+8.83883476e-02j
+  -8.96835583e-19+8.83883476e-02j ... -3.03360692e-17-8.83883476e-02j
+  -2.45877013e-17-8.83883476e-02j  3.44007791e-17+8.83883476e-02j]
+ [-8.83883476e-02+1.99198461e-17j -8.83883476e-02+1.99198461e-17j
+   8.83883476e-02-3.46394629e-17j ...  8.83883476e-02-1.35840974e-17j
+  -8.83883476e-02+6.79047227e-17j  8.83883476e-02-2.74618852e-17j]
+ [-8.83883476e-02+1.47746234e-17j  8.83883476e-02-2.45877013e-17j
+   8.83883476e-02-2.05229913e-17j ... -8.83883476e-02+2.56682141e-17j
+  -8.83883476e-02+3.49881599e-17j -8.83883476e-02+2.68587400e-17j]
+ ...
+ [ 2.27940301e-17+8.83883476e-02j -2.27940301e-17-8.83883476e-02j
+  -1.29809522e-17-8.83883476e-02j ...  3.03360692e-17+8.83883476e-02j
+   3.77101955e-18+8.83883476e-02j  4.13396730e-17+8.83883476e-02j]
+ [ 4.54043830e-17+8.83883476e-02j  4.42138570e-17+8.83883476e-02j
+  -4.01491471e-17-8.83883476e-02j ...  2.05229913e-17-8.83883476e-02j
+   5.17401317e-17+8.83883476e-02j -4.19270538e-17-8.83883476e-02j]
+ [ 8.83883476e-02-1.76488074e-17j  8.83883476e-02-1.76488074e-17j
+   8.83883476e-02-3.15265952e-17j ... -8.83883476e-02+7.71146553e-17j
+  -8.83883476e-02+1.01067683e-17j  8.83883476e-02-1.99198461e-17j]]
+        Mansikka
+ [[ 3.20197272e-17+8.83883476e-02j  4.58975150e-17+8.83883476e-02j
+   4.59917638e-17+8.83883476e-02j ... -6.26494867e-17-8.83883476e-02j
+  -5.98695516e-17-8.83883476e-02j  3.90528699e-17+8.83883476e-02j]
+ [-8.83883476e-02+5.15720604e-17j -8.83883476e-02+5.85109543e-17j
+   8.83883476e-02-4.16647337e-17j ...  8.83883476e-02-4.86978764e-17j
+  -8.83883476e-02+4.74131017e-17j  8.83883476e-02-4.86036277e-17j]
+ [-8.83883476e-02+3.47258398e-17j  8.83883476e-02-2.77869459e-17j
+   8.83883476e-02-3.48200886e-17j ... -8.83883476e-02+4.16647337e-17j
+  -8.83883476e-02+4.86978764e-17j -8.83883476e-02+5.85109543e-17j]
+ ...
+ [ 3.21139760e-17+8.83883476e-02j -4.19270538e-17-8.83883476e-02j
+  -3.20197272e-17-8.83883476e-02j ...  5.29306577e-17+8.83883476e-02j
+   4.18328050e-17+8.83883476e-02j  4.18328050e-17+8.83883476e-02j]
+ [ 5.85847768e-17+8.83883476e-02j  5.16458829e-17+8.83883476e-02j
+  -5.58048416e-17-8.83883476e-02j ... -4.47069890e-17-8.83883476e-02j
+   6.56179195e-17+8.83883476e-02j -3.21139760e-17-8.83883476e-02j]
+ [ 8.83883476e-02-3.48200886e-17j  8.83883476e-02-4.58236925e-17j
+   8.83883476e-02-5.14778116e-17j ... -8.83883476e-02+5.56367703e-17j
+  -8.83883476e-02+5.55425216e-17j  8.83883476e-02-6.53555994e-17j]]
+Equals:         
+ True
+Dif: 1.2408168296974786e-28
