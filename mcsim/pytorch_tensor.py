@@ -13,6 +13,15 @@ import gc
 #from memory_profiler import profile
 
 #@profile()
+
+
+print("torch cuda:",torch.cuda.is_available())
+print("torch dev count:",torch.cuda.device_count())
+print("torch device",torch.cuda.device(0))
+print("torch curnt dev",torch.cuda.current_device())
+
+device = torch.device('cuda')
+
 def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = True):
     """
 
@@ -45,7 +54,7 @@ def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = Tr
     nr_do_not_contract = pyzx_graph.num_outputs() + pyzx_graph.num_inputs()
     while len(contraction_ids) > nr_do_not_contract:
 
-        #print("Contraction status: {}/{}".format(len(contraction_ids) - nr_do_not_contract, nr_edges_to_contract))
+        print("Contraction status: {}/{}".format(len(contraction_ids) - nr_do_not_contract, nr_edges_to_contract))
         # print("\n## contraction_edge in named_contraction_order ##\n")
 
         contraction_edge_index = contraction_ids[0]
@@ -114,12 +123,12 @@ def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = Tr
     toc = time.perf_counter()
     print(f"Time in mcsim_tensorfy {toc - tic:0.4f} seconds")
 
-    return tensor.numpy()
+    return tensor.cpu().numpy()
 
 #@profile()
 def convert_hadamard_edges(mansikka_edge_map, mansikka_node_map, pyzx_graph):
     # Eloiminate Hadamrd edges
-    had_tensor = 1 / math.sqrt(2) * torch.tensor([[1, 1], [1, -1]],dtype=torch.cfloat)  # --0--H--1--
+    had_tensor = 1 / math.sqrt(2) * torch.tensor([[1, 1], [1, -1]],dtype=torch.cfloat,device=device)  # --0--H--1--
     for edge_key in mansikka_edge_map:
         edge = mansikka_edge_map[edge_key]
         if edge["type"] == EdgeType.HADAMARD:  # hadamard
@@ -205,11 +214,11 @@ def get_tensor_from_g(pyzx_graph, v):
         return 0  # np.identity(2)
 
     if v_type == 1:
-        t = torch.from_numpy(pyzxtensor.Z_to_tensor(arity, phase)).type(torch.cfloat)
+        t = torch.from_numpy(pyzxtensor.Z_to_tensor(arity, phase)).type(torch.cfloat).to(device=device)
     elif v_type == 2:
-        t = torch.from_numpy(pyzxtensor.X_to_tensor(arity, phase)).type(torch.cfloat)
+        t = torch.from_numpy(pyzxtensor.X_to_tensor(arity, phase)).type(torch.cfloat).to(device=device)
     elif v_type == 3:
-        t = torch.from_numpy(pyzxtensor.H_to_tensor(arity, phase)).type(torch.cfloat)
+        t = torch.from_numpy(pyzxtensor.H_to_tensor(arity, phase)).type(torch.cfloat).to(device=device)
     else:
         raise ValueError(
             "Vertex %s has non-ZXH type but is not an input or output" % str(v)
