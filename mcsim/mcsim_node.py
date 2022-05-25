@@ -1,12 +1,12 @@
 import pyzx
-
+import torch
 import mcsim
 
 
 class MansikkaNode:
     def __init__(self, v, pyzx_graph):
         self.index = v
-        self.tensor = mcsim.mcsim_tensor.get_tensor_from_g(pyzx_graph, v)
+        self.tensor = mcsim.pytorch_tensor.get_tensor_from_g(pyzx_graph, v)
 
         assert (isinstance(pyzx_graph, pyzx.graph.graph_s.GraphS))
 
@@ -50,7 +50,7 @@ class MansikkaNode:
         input_edges.extend(output_edges)
 
         transposition_order = [n_edge_ids.index(e) for e in input_edges]
-        self.tensor = self.tensor.transpose(transposition_order)
+        self.tensor = torch.permute(self.tensor,transposition_order)
         self.edge_ids = input_edges
 
     def edge_set_and_xor(self, other_node):

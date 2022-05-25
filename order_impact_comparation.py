@@ -21,7 +21,7 @@ random.seed(1)
 # circuit = pyzx.generate.CNOT_HAD_PHASE_circuit_mixt(qubits, depth, p_had=0.5, p_cnot=0.5)
 
 # Load circuit_from file
-circuit_path ="C:/Users/tomut/Documents/GitHub/pyzx/circuits/Arithmetic_and_Toffoli"+"/mod_adder_1024_tpar.qc"#"/gf2^4_mult_before"
+circuit_path ="C:/Users/tomut/Documents/GitHub/pyzx/circuits/Arithmetic_and_Toffoli"+"/vbe_adder_3_before"#"/gf2^4_mult_before"
 circuit = pyzx.Circuit.load(circuit_path)
 qubits = circuit.qubits
 print("nr_qubits:", qubits)
@@ -45,7 +45,7 @@ baseline_circ, baseline_graph = baseline_pipeline.load(circuit)
 mansikka_circ, mansikka_graph = mansikka_pipeline.load(circuit)
 simple_circ, simple_graph = simple_pipeline.load(circuit)
 
-#matrix_0 = baseline_pipeline.extract(baseline_graph)
+matrix_0 = baseline_pipeline.extract(baseline_graph)
 matrix_1 = mansikka_pipeline.extract(mansikka_graph)
 matrix_2 = simple_pipeline.extract(simple_graph)
 

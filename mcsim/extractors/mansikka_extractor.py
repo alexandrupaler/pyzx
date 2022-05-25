@@ -8,7 +8,7 @@ import pyzx
 from .base_extractor import BaseExtractor
 from .mansikka_graph import MansikkaGraph
 
-from mcsim.mcsim_tensor import mcsim_tensorfy
+from mcsim.pytorch_tensor import mcsim_tensorfy
 
 
 class MansikkaExtractor(BaseExtractor):
