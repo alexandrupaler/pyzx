@@ -54,7 +54,7 @@ def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = Tr
     nr_do_not_contract = pyzx_graph.num_outputs() + pyzx_graph.num_inputs()
     while len(contraction_ids) > nr_do_not_contract:
 
-        print("Contraction status: {}/{}".format(len(contraction_ids) - nr_do_not_contract, nr_edges_to_contract))
+        # print("Contraction status: {}/{}".format(len(contraction_ids) - nr_do_not_contract, nr_edges_to_contract))
         # print("\n## contraction_edge in named_contraction_order ##\n")
 
         contraction_edge_index = contraction_ids[0]
@@ -113,6 +113,7 @@ def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = Tr
         # update output node
         mansikka_output_node.update_edges_in_tensor(mansikka_input_node, mansikka_edge_map)
         del(mansikka_input_node)
+        #torch.cuda.empty_cache()
         #gc.collect()
 
     tensor = mansikka_output_node.tensor
