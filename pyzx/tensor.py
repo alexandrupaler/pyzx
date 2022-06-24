@@ -37,9 +37,9 @@ from math import pi, sqrt
 
 from typing import Optional
 
-
 try:
     import cupy as np
+
     print("CUPY tensorfy!")
 except:
     import numpy as np
@@ -47,13 +47,11 @@ except:
     np.set_printoptions(suppress=True)
 
 import time
-#from memory_profiler import  profile
+# from memory_profiler import  profile
 
 # typing imports
 from typing import TYPE_CHECKING, List, Dict, Union
 from .utils import FractionLike, FloatInt, VertexType, EdgeType
-
-
 
 if TYPE_CHECKING:
     from .graph.base import BaseGraph, VT, ET
@@ -74,11 +72,11 @@ def Z_to_tensor(arity: int, phase: float) -> np.ndarray:
 
 
 def X_to_tensor(arity: int, phase: float) -> np.ndarray:
-    m = np.ones(2**arity, dtype=complex)
+    m = np.ones(2 ** arity, dtype=complex)
     if arity == 0:
         m[()] = 1 + np.exp(1j * phase)
         return m
-    for i in range(2**arity):
+    for i in range(2 ** arity):
         if bin(i).count("1") % 2 == 0:
             m[i] += np.exp(1j * phase)
         else:
@@ -89,7 +87,7 @@ def X_to_tensor(arity: int, phase: float) -> np.ndarray:
 
 
 def H_to_tensor(arity: int, phase: float) -> np.ndarray:
-    m = np.ones(2**arity, dtype=complex)
+    m = np.ones(2 ** arity, dtype=complex)
     if phase != 0:
         m[-1] = np.exp(1j * phase)
     return m.reshape([2] * arity)
@@ -118,7 +116,8 @@ def pop_and_shift_uncontracted_indices(past_verts, indices):
             indices[w] = l2
     return past_to_contract
 
-#@profile
+
+# @profile
 def tensorfy(g: "BaseGraph[VT,ET]", preserve_scalar: bool = True) -> np.ndarray:
     """Takes in a Graph and outputs a multidimensional numpy array
     representing the linear map the ZX-diagram implements.
@@ -257,7 +256,7 @@ def tensorfy(g: "BaseGraph[VT,ET]", preserve_scalar: bool = True) -> np.ndarray:
             idx_contr_past = pop_and_shift_uncontracted_indices(
                 past_vertices, uncontracted_indices
             )
-            #print("idx_contr_past 0:{} \n###".format(idx_contr_past))
+            # print("idx_contr_past 0:{} \n###".format(idx_contr_past))
 
             # The last axes in the tensor t are the one that will be contracted
             idx_contr_curr = list(
@@ -279,14 +278,8 @@ def tensorfy(g: "BaseGraph[VT,ET]", preserve_scalar: bool = True) -> np.ndarray:
             )
 
             if not preserve_scalar and i % 10 == 0:
-                if np.abs(tensor).max() < 10**-6:  # Values are becoming too small
-                    tensor *= 10**4  # So scale all the numbers up
-
-
-
-
-
-
+                if np.abs(tensor).max() < 10 ** -6:  # Values are becoming too small
+                    tensor *= 10 ** 4  # So scale all the numbers up
 
     if preserve_scalar:
         tensor *= g.scalar.to_number()
@@ -323,7 +316,7 @@ def tensor_to_matrix(t: np.ndarray, inputs: int, outputs: int) -> np.ndarray:
     The ``inputs`` and ``outputs`` arguments specify the final shape of the matrix:
     2^(outputs) x 2^(inputs)"""
     rows = []
-    for r in range(2**outputs):
+    for r in range(2 ** outputs):
         if outputs == 0:
             o = []
         else:
@@ -332,7 +325,7 @@ def tensor_to_matrix(t: np.ndarray, inputs: int, outputs: int) -> np.ndarray:
         if inputs == 0:
             row.append(t[tuple(o)])
         else:
-            for c in range(2**inputs):
+            for c in range(2 ** inputs):
                 a = o.copy()
                 a.extend([int(i) for i in bin(c)[2:].zfill(inputs)])
                 # print(a)
@@ -343,7 +336,7 @@ def tensor_to_matrix(t: np.ndarray, inputs: int, outputs: int) -> np.ndarray:
 
 
 def compare_tensors(
-    t1: TensorConvertible, t2: TensorConvertible, preserve_scalar: bool = False
+        t1: TensorConvertible, t2: TensorConvertible, preserve_scalar: bool = False
 ) -> bool:
     """Returns true if ``t1`` and ``t2`` represent equal tensors.
     When `preserve_scalar` is False (the default), equality is checked up to nonzero rescaling.
@@ -363,7 +356,7 @@ def compare_tensors(
         return True
     if preserve_scalar:
         return False  # We do not check for equality up to scalar
-    epsilon = 10**-14
+    epsilon = 10 ** -14
     for i, a in enumerate(t1.flat):
         if abs(a) > epsilon:  # type: ignore #TODO: Figure out how numpy typing works
             if abs(t2.flat[i]) < epsilon:
@@ -388,7 +381,7 @@ def find_scalar_correction(t1: TensorConvertible, t2: TensorConvertible) -> comp
     if not isinstance(t2, np.ndarray):
         t2 = t2.to_tensor(preserve_scalar=True)
 
-    epsilon = 10**-14
+    epsilon = 10 ** -14
     for i, a in enumerate(t1.flat):
         if abs(a) > epsilon:  # type: ignore #TODO: Figure out how numpy typing works
             if abs(t2.flat[i]) < epsilon:
