@@ -13,7 +13,7 @@ class Extractor_Dist(BaseExtractor):
     def distribution_f(self, params) -> List[float]:
         return simple_distribution(params)
 
-    def extract(self, graph: pyzx.graph, show_changes=0):
+    def extract(self, graph: pyzx.graph, show_changes=0, tolerance=0.5 ):
         """
         Model of extractor that tries to take advance of specific distribution of degre/rerows
         :graph: the pyzx.graph whose matrix we want to extract

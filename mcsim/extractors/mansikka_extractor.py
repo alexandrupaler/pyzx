@@ -35,16 +35,15 @@ class MansikkaExtractor(BaseExtractor):
 
         # return graph.to_matrix()
         return graph.to_matrix(
-            my_tensorfy = mcsim_tensorfy,
-            contraction_order = contraction_order
+            my_tensorfy=mcsim_tensorfy,
+            contraction_order=contraction_order
         )  # mcs_tensorfy(contraction_order, graph, preserve_scalar=True)
 
 
 def get_contraction_order(graph, nr_tensors_to_rem, nr_iter=10):
-
-    working_graph = graph #MansikkaGraph(graph.vertices.copy(), graph.edges.copy())
+    working_graph = graph  # MansikkaGraph(graph.vertices.copy(), graph.edges.copy())
     initial_order = [k for k in graph.vertices]
-    #return initial_order
+    # return initial_order
     contraction_order = []
 
     initial_tw = working_graph.find_treewidth_from_order(initial_order)
@@ -56,8 +55,8 @@ def get_contraction_order(graph, nr_tensors_to_rem, nr_iter=10):
         nr_iter = nr_iter - 1
         reduced_g, reduced_order, tw, removing_order = \
             working_graph.greedy_treewidth_deletion(
-            initial_order, nr_tensors_to_rem
-        )
+                initial_order, nr_tensors_to_rem
+            )
         for node in removing_order:
             contraction_order.append(node)
 
@@ -73,10 +72,9 @@ def get_contraction_order(graph, nr_tensors_to_rem, nr_iter=10):
 
 
 def reorder_indices(
-    pyzx_graph,
-    contraction_order,
+        pyzx_graph,
+        contraction_order,
 ):
-
     start_index = max(contraction_order) + 1
     node_map = {}
 

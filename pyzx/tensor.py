@@ -124,7 +124,7 @@ def tensorfy(g: "BaseGraph[VT,ET]", preserve_scalar: bool = True) -> np.ndarray:
     representing the linear map the ZX-diagram implements.
     Beware that quantum circuits take exponential memory to represent."""
 
-    tic = time.perf_counter()
+    # tic = time.perf_counter()
 
     if g.is_hybrid():
         raise ValueError("Hybrid graphs are not supported.")
@@ -313,8 +313,8 @@ def tensorfy(g: "BaseGraph[VT,ET]", preserve_scalar: bool = True) -> np.ndarray:
     # print("tesnsor shape:", tensor.shape)
     # print("tensor:", tensor)
 
-    toc = time.perf_counter()
-    print(f"Time in tensorfy {toc - tic:0.4f} seconds")
+    # toc = time.perf_counter()
+    # print(f"Time in tensorfy {toc - tic:0.4f} seconds")
     return tensor
 
 

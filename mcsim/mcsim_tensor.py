@@ -10,22 +10,18 @@ except:
     np.set_printoptions(suppress=True)
 
 from pyzx.utils import EdgeType
-import pyzx.tensor as pyzxtensor
+import pyzx.tensor as pyzx_tensor
 
 from .mcsim_node import MansikkaNode
 
 import time
-#from  memory_profiler import profile
-import gc
 
-#from memory_profiler import profile
 
-#@profile()
 def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = True) -> np.ndarray:
     """
 
     """
-    tic = time.perf_counter()
+    # tic = time.perf_counter()
     # print("\n################## msc tensorfy ####################")
 
     # Dictionaries with the nodes and edges in the graph.
@@ -46,14 +42,13 @@ def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = Tr
     # print("contraction_order 0:", contraction_ids)
 
     # TODO  Alexandru: Check if it's a compact circuit
-
-    nr_edges_to_contract = len(contraction_ids) - (pyzx_graph.num_outputs() + pyzx_graph.num_inputs())
+    # nr_edges_to_contract = len(contraction_ids) - (pyzx_graph.num_outputs() + pyzx_graph.num_inputs())
 
     # Do not contract edges  connecting to input and output nodes
     nr_do_not_contract = pyzx_graph.num_outputs() + pyzx_graph.num_inputs()
     while len(contraction_ids) > nr_do_not_contract:
 
-        #print("Contraction status: {}/{}".format(len(contraction_ids) - nr_do_not_contract, nr_edges_to_contract))
+        # print("Contraction status: {}/{}".format(len(contraction_ids) - nr_do_not_contract, nr_edges_to_contract))
         # print("\n## contraction_edge in named_contraction_order ##\n")
 
         contraction_edge_index = contraction_ids[0]
@@ -69,28 +64,24 @@ def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = Tr
 
         edge_id_and, edge_id_xor = mansikka_output_node.edge_set_and_xor(mansikka_input_node)
 
-        # These are the axes the will be removed
-        for edgex in edge_id_and:
-            if mansikka_edge_map[edgex]["inp"] in pyzx_graph.inputs():
+        # These are the axes that will be removed
+        for edge_x in edge_id_and:
+            if mansikka_edge_map[edge_x]["inp"] in pyzx_graph.inputs():
                 input_axes.append(1)  # 1
             else:
-                input_axes.append(mansikka_input_node.edge_ids.index(edgex))
+                input_axes.append(mansikka_input_node.edge_ids.index(edge_x))
 
-            output_axes.append(mansikka_output_node.edge_ids.index(edgex))
+            output_axes.append(mansikka_output_node.edge_ids.index(edge_x))
 
         # For remaining edges, update the end points
-        for edgex in edge_id_xor:
-            if mansikka_edge_map[edgex]["inp"] == edge["inp"]:
-                mansikka_edge_map[edgex]["inp"] = edge["out"]
-            if mansikka_edge_map[edgex]["out"] == edge["inp"]:
-                mansikka_edge_map[edgex]["out"] = edge["out"]
-
+        for edge_x in edge_id_xor:
+            if mansikka_edge_map[edge_x]["inp"] == edge["inp"]:
+                mansikka_edge_map[edge_x]["inp"] = edge["out"]
+            if mansikka_edge_map[edge_x]["out"] == edge["inp"]:
+                mansikka_edge_map[edge_x]["out"] = edge["out"]
 
         # remove the input node from the map
         del mansikka_node_map[edge["inp"]]
-        #gc.collect()
-        # print("# remaining nodes#")
-        # print(" \nnodes:{} \n".format(mansikka_node_map.keys()))
 
         # update the edge list
         # remove contracted edges
@@ -99,33 +90,27 @@ def mcsim_tensorfy(pyzx_graph, contraction_edge_list, preserve_scalar: bool = Tr
                 contraction_ids.remove(deprecate_edge_id)
                 mansikka_edge_map.pop(deprecate_edge_id)
         del deprecate_edge_id
-        #gc.collect()
-        # calculate new tensor and update the output node tensor
-        # print("ni:{}|no{}".format(input_axes, output_axes))
-        # new_tensor = np.tensordot(
-        #     mansikka_input_node.tensor, mansikka_output_node.tensor, axes=(input_axes, output_axes)
-        # )
+
         mansikka_output_node.set_tensor(np.tensordot(
             mansikka_input_node.tensor, mansikka_output_node.tensor, axes=(input_axes, output_axes)
         ))
 
         # update output node
         mansikka_output_node.update_edges_in_tensor(mansikka_input_node, mansikka_edge_map)
-        del(mansikka_input_node)
-        #gc.collect()
+        del mansikka_input_node
 
     tensor = mansikka_output_node.tensor
     if preserve_scalar:
         tensor *= pyzx_graph.scalar.to_number()
 
     # print("\n################## msc tensorfy -done- ####################")
-    toc = time.perf_counter()
-    print(f"Time in mcsim_tensorfy {toc - tic:0.4f} seconds")
+    # toc = time.perf_counter()
+    # print(f"Time in mcsim_tensorfy {toc - tic:0.4f} seconds")
     return tensor
 
-#@profile()
+
 def convert_hadamard_edges(mansikka_edge_map, mansikka_node_map, pyzx_graph):
-    # Eloiminate Hadamrd edges
+    # Eliminate Hadamard edges
     for edge_key in mansikka_edge_map:
         edge = mansikka_edge_map[edge_key]
         if edge["type"] == EdgeType.HADAMARD:  # hadamard
@@ -148,7 +133,7 @@ def convert_hadamard_edges(mansikka_edge_map, mansikka_node_map, pyzx_graph):
                 # transposition_order = [mansikka_node_map[edge["out"]].edge_ids.index(k) for k in new_edge_order]
                 mansikka_node_map[edge["out"]].set_tensor(new_tensor)
 
-#@profile()
+
 def reorder_contraction_edge_list(contraction_edge_list, nr_vert, pyzx_graph):
     # move the ede with  inputs at the end
     input_edge_list = [-1] * pyzx_graph.num_inputs()
@@ -161,17 +146,14 @@ def reorder_contraction_edge_list(contraction_edge_list, nr_vert, pyzx_graph):
         elif edge[1] in pyzx_graph.outputs():
             position = pyzx_graph.num_outputs() - (nr_vert - edge[1] - 1) - 1
             output_edge_list[position] = edge
-        # print("index", position)
     for edge in input_edge_list:
         contraction_edge_list.remove(edge)
     for edge in output_edge_list:
         contraction_edge_list.remove(edge)
     contraction_edge_list.extend(input_edge_list)
     contraction_edge_list.extend(output_edge_list)
-    # print("input_order:", input_edge_list)
-    # print("output_order:", output_edge_list)
 
-#@profile()
+
 def get_nodes_edges(pyzx_graph):
     node_map = {}
     edge_map = {}
@@ -219,11 +201,11 @@ def get_tensor_from_g(pyzx_graph, v):
         return output_to_tensor()  # np.identity(2)
 
     if v_type == 1:
-        t = pyzxtensor.Z_to_tensor(arity, phase)
+        t = pyzx_tensor.Z_to_tensor(arity, phase)
     elif v_type == 2:
-        t = pyzxtensor.X_to_tensor(arity, phase)
+        t = pyzx_tensor.X_to_tensor(arity, phase)
     elif v_type == 3:
-        t = pyzxtensor.H_to_tensor(arity, phase)
+        t = pyzx_tensor.H_to_tensor(arity, phase)
     else:
         raise ValueError(
             "Vertex %s has non-ZXH type but is not an input or output" % str(v)

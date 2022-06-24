@@ -1,3 +1,5 @@
+OPENQASM 2.0;
+include "qelib1.inc";
 Inputs: 0:Qbit, 1:Qbit, 2:Qbit, 3:Qbit, 4:Qbit, 5:Qbit, 6:Qbit, 7:Qbit, 8:Qbit, 9:Qbit, 10:Qbit, 11:Qbit, 12:Qbit, 13:Qbit, 14:Qbit, 15:Qbit, 16:Qbit, 17:Qbit, 18:Qbit, 19:Qbit, 20:Qbit, 21:Qbit, 22:Qbit, 23:Qbit
 QGate["not"](2) with controls=[+3] with nocontrol
 QGate["not"](7) with controls=[+8] with nocontrol
